@@ -180,7 +180,9 @@ public class Cell {
      */
     public void setStyle(Style style) {
         java.util.Objects.requireNonNull(style, "style");
-        getOrCreateRecord().setStyle(style.toModel());
+        CellRecord rec = getOrCreateRecord();
+        rec.setStyle(style.toModel());
+        rec.setIsExplicitlyStored(true);
     }
 
     /**

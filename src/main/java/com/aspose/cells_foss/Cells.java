@@ -82,12 +82,21 @@ public class Cells {
      * @param totalColumns total columns
      */
     public void merge(int firstRow, int firstColumn, int totalRows, int totalColumns) {
-        // Handle the relevant branch before the state changes.
         if (firstRow < 0 || firstColumn < 0) {
             throw new CellsException("Merge origin indices must be non-negative.");
         }
         if (totalRows <= 0 || totalColumns <= 0) {
             throw new CellsException("Merge range dimensions must be positive.");
+        }
+        int lastRow = firstRow + totalRows - 1;
+        int lastCol = firstColumn + totalColumns - 1;
+        for (MergeRegion r : worksheet.getModel().getMergeRegions()) {
+            int rLastRow = r.getFirstRow() + r.getTotalRows() - 1;
+            int rLastCol = r.getFirstColumn() + r.getTotalColumns() - 1;
+            if (firstRow <= rLastRow && lastRow >= r.getFirstRow()
+                    && firstColumn <= rLastCol && lastCol >= r.getFirstColumn()) {
+                throw new CellsException("Merge range overlaps with an existing merged region.");
+            }
         }
         worksheet.getModel().getMergeRegions().add(
                 new MergeRegion(firstRow, firstColumn, totalRows, totalColumns));

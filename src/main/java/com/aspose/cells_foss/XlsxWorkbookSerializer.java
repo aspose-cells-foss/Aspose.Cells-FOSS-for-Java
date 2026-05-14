@@ -49,30 +49,144 @@ public final class XlsxWorkbookSerializer {
             }
         }
         boolean hasSst = !sst.getValues().isEmpty();
-        boolean hasDocProps = model.getDocumentProperties().hasStoredState();
+        boolean hasDocProps = true; // always include docProps per OPC "should" requirement
 
         // Pre-build style table so styles.xml and cell s= indices are consistent
         XlsxWorkbookStyles.StyleTable styleTable = XlsxWorkbookStyles.buildStyleTable(model);
 
+        int[] tableCounter = {1};
+        int[] chartCounter = {1};
+        int[] imageCounter = {1};
+        int[] drawingCounter = {1};
+
+        // Collect all drawing parts first (charts, pictures) so Content_Types can be built
+        Map<String, byte[]> pendingChartXmls = new LinkedHashMap<>();
+        Map<String, byte[]> pendingMediaFiles = new LinkedHashMap<>();
+
+        // Pre-pass: intentional reset — counters are accumulated per-sheet in the build loop below
+        chartCounter[0] = 1;
+        imageCounter[0] = 1;
+
+        // Build drawings data before writing the ZIP
+        Map<Integer, byte[]> drawingXmls = new LinkedHashMap<>();
+        Map<Integer, List<String[]>> drawingRelsMaps = new LinkedHashMap<>();
+        Map<Integer, Integer> sheetToDrawingIndex = new LinkedHashMap<>();
+
+        for (int i = 0; i < sheets.size(); i++) {
+            WorksheetModel ws = sheets.get(i);
+            if (!XlsxWorkbookDrawings.hasDrawings(ws)) continue;
+            int dIdx = drawingCounter[0]++;
+            List<String[]> dRels = new ArrayList<>();
+            byte[] dXml = XlsxWorkbookDrawings.buildDrawingXml(
+                ws, chartCounter[0] - 1, imageCounter[0] - 1, dRels, pendingChartXmls, pendingMediaFiles);
+            chartCounter[0] += ws.getCharts().size();
+            imageCounter[0] += ws.getPictures().size();
+            for (ChartModel chart : ws.getCharts()) imageCounter[0] += chart.getChartImageCount();
+            for (ShapeModel s : ws.getShapes()) imageCounter[0] += s.getEmbeddedImageData().size();
+            drawingXmls.put(dIdx, dXml);
+            drawingRelsMaps.put(dIdx, dRels);
+            sheetToDrawingIndex.put(i, dIdx);
+        }
+
+        // Reset counters for actual writing
+        chartCounter[0] = 1;
+        imageCounter[0] = 1;
+        drawingCounter[0] = 1;
+
+        boolean hasDrawings = !drawingXmls.isEmpty();
+        boolean hasCharts = !pendingChartXmls.isEmpty();
+        boolean hasVml = sheets.stream().anyMatch(ws -> XlsxWorkbookComments.buildVmlDrawingXml(ws) != null);
+        boolean hasTheme = hasDrawings;
+
+        int totalTableCount = sheets.stream().mapToInt(ws -> ws.getListObjects().size()).sum();
         try (ZipOutputStream zip = new ZipOutputStream(stream, StandardCharsets.UTF_8)) {
             zip.setMethod(ZipOutputStream.DEFLATED);
-            XlsxWorkbookArchiveHelpers.write(zip, "[Content_Types].xml", XlsxWorkbookArchiveHelpers.contentTypesXml(sheets.size(), hasSst, hasDocProps));
+            byte[] ctXml = XlsxWorkbookArchiveHelpers.contentTypesXml(sheets.size(), hasSst, hasDocProps,
+                    hasDrawings, hasCharts, pendingChartXmls.keySet(), pendingMediaFiles,
+                    drawingXmls.size(), hasVml, hasTheme);
+            ctXml = XlsxWorkbookArchiveHelpers.addTableContentTypes(ctXml, totalTableCount);
+            XlsxWorkbookArchiveHelpers.write(zip, "[Content_Types].xml", ctXml);
             XlsxWorkbookArchiveHelpers.write(zip, "_rels/.rels", XlsxWorkbookArchiveHelpers.packageRelsXml(hasDocProps));
             XlsxWorkbookArchiveHelpers.write(zip, "xl/workbook.xml", workbookXml(model));
             if (hasDocProps) {
                 XlsxWorkbookArchiveHelpers.write(zip, "docProps/core.xml", buildCorePropertiesXml(model.getDocumentProperties().getCore()));
                 XlsxWorkbookArchiveHelpers.write(zip, "docProps/app.xml", buildAppPropertiesXml(model.getDocumentProperties().getExtended()));
             }
-            XlsxWorkbookArchiveHelpers.write(zip, "xl/_rels/workbook.xml.rels", XlsxWorkbookArchiveHelpers.workbookRelsXml(sheets.size(), hasSst));
+            XlsxWorkbookArchiveHelpers.write(zip, "xl/_rels/workbook.xml.rels", XlsxWorkbookArchiveHelpers.workbookRelsXml(sheets.size(), hasSst, hasTheme));
+            if (hasTheme) {
+                byte[] themeBytes = model.getRawThemeXml() != null
+                    ? model.getRawThemeXml()
+                    : XlsxWorkbookArchiveHelpers.defaultThemeXml();
+                XlsxWorkbookArchiveHelpers.write(zip, "xl/theme/theme1.xml", themeBytes);
+            }
+
             for (int i = 0; i < sheets.size(); i++) {
-                List<String[]> externalRels = new ArrayList<>();
+                WorksheetModel ws = sheets.get(i);
+                List<String[]> sheetRels = new ArrayList<>();
+
+                Integer dIdxForSheet = sheetToDrawingIndex.get(i);
+                String drawingRelId = dIdxForSheet != null ? "rIdDrw" + dIdxForSheet : null;
                 XlsxWorkbookArchiveHelpers.write(zip, "xl/worksheets/sheet" + (i + 1) + ".xml",
-                        worksheetXml(sheets.get(i), sst, model, styleTable, externalRels));
-                if (!externalRels.isEmpty()) {
+                        worksheetXml(ws, sst, model, styleTable, sheetRels, tableCounter, drawingRelId));
+
+                // Comments
+                byte[] commentsXml = XlsxWorkbookComments.buildCommentsXml(ws);
+                if (commentsXml != null) {
+                    int sn = i + 1;
+                    XlsxWorkbookArchiveHelpers.write(zip, "xl/comments" + sn + ".xml", commentsXml);
+                    byte[] vmlXml = XlsxWorkbookComments.buildVmlDrawingXml(ws);
+                    if (vmlXml != null)
+                        XlsxWorkbookArchiveHelpers.write(zip, "xl/drawings/vmlDrawing" + sn + ".vml", vmlXml);
+                    sheetRels.add(new String[]{"rIdComm" + sn,
+                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+                        "../comments" + sn + ".xml", null});
+                    if (vmlXml != null)
+                        sheetRels.add(new String[]{"rIdVml" + sn,
+                            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing",
+                            "../drawings/vmlDrawing" + sn + ".vml", null});
+                }
+
+                // Tables — indices were already assigned by buildTablePartsSnippet
+                List<ListObjectModel> tables = ws.getListObjects();
+                int firstTableIdx = tableCounter[0] - tables.size();
+                for (int t = 0; t < tables.size(); t++) {
+                    XlsxWorkbookArchiveHelpers.write(zip, "xl/tables/table" + (firstTableIdx + t) + ".xml",
+                        XlsxWorkbookTables.buildTableXml(tables.get(t)));
+                }
+
+                // Drawing (pictures + charts)
+                Integer dIdx = sheetToDrawingIndex.get(i);
+                if (dIdx != null) {
+                    String dPath = "xl/drawings/drawing" + dIdx + ".xml";
+                    XlsxWorkbookArchiveHelpers.write(zip, dPath, drawingXmls.get(dIdx));
+                    // Write drawing rels
+                    List<String[]> dRels = drawingRelsMaps.get(dIdx);
+                    if (!dRels.isEmpty()) {
+                        XlsxWorkbookArchiveHelpers.write(zip,
+                            "xl/drawings/_rels/drawing" + dIdx + ".xml.rels",
+                            XlsxWorkbookHyperlinks.buildSheetRelsXml(dRels));
+                    }
+                    sheetRels.add(new String[]{"rIdDrw" + dIdx,
+                        XlsxWorkbookDrawings.DRAWING_REL_TYPE,
+                        "../drawings/drawing" + dIdx + ".xml", null});
+                }
+
+                if (!sheetRels.isEmpty()) {
                     XlsxWorkbookArchiveHelpers.write(zip, "xl/worksheets/_rels/sheet" + (i + 1) + ".xml.rels",
-                            XlsxWorkbookHyperlinks.buildSheetRelsXml(externalRels));
+                            XlsxWorkbookHyperlinks.buildSheetRelsXml(sheetRels));
                 }
             }
+
+            // Media files (images)
+            for (Map.Entry<String, byte[]> e : pendingMediaFiles.entrySet()) {
+                XlsxWorkbookArchiveHelpers.write(zip, e.getKey(), e.getValue());
+            }
+
+            // Chart XML files
+            for (Map.Entry<String, byte[]> e : pendingChartXmls.entrySet()) {
+                XlsxWorkbookArchiveHelpers.write(zip, e.getKey(), e.getValue());
+            }
+
             if (hasSst) XlsxWorkbookArchiveHelpers.write(zip, "xl/sharedStrings.xml", XlsxWorkbookArchiveHelpers.sharedStringsXml(sst));
             XlsxWorkbookArchiveHelpers.write(zip, "xl/styles.xml", styleTable.buildStylesXmlBytes());
         }
@@ -129,11 +243,14 @@ public final class XlsxWorkbookSerializer {
      * @param sst sst
      * @param wb wb
      * @param styleTable style table
-     * @param externalRels external rels
+     * @param sheetRels accumulated sheet relationships (hyperlinks, tables, comments)
+     * @param tableCounter global table index counter (incremented per table written)
      * @return the computed result
      */
     private static byte[] worksheetXml(WorksheetModel ws, SharedStringRepository sst, WorkbookModel wb,
-                                       XlsxWorkbookStyles.StyleTable styleTable, List<String[]> externalRels) {
+                                       XlsxWorkbookStyles.StyleTable styleTable, List<String[]> sheetRels,
+                                       int[] tableCounter, String drawingRelId) {
+        List<String[]> externalRels = sheetRels;
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
         sb.append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"");
@@ -198,6 +315,9 @@ public final class XlsxWorkbookSerializer {
                       .append(XlsxWorkbookSerializerCommon.fmt(serial)).append("</v></c>");
                 } else if (rec.getKind() == CellValueKind.NUMBER && rec.getValue() instanceof Number n) {
                     sb.append("<c r=\"").append(ref).append("\"").append(sAttr).append("><v>").append(n).append("</v></c>");
+                } else if (!sAttr.isEmpty()) {
+                    // blank cell with non-default style — emit as styled empty cell
+                    sb.append("<c r=\"").append(ref).append("\"").append(sAttr).append("/>");
                 }
             }
             sb.append("</row>");
@@ -223,6 +343,9 @@ public final class XlsxWorkbookSerializer {
         XlsxWorkbookWorksheetProtection.buildSheetProtectionSection(ws, sb);
         XlsxWorkbookHyperlinks.buildHyperlinksSection(ws, sb, externalRels);
         XlsxWorkbookPageSetup.buildPageSetupSection(ws, sb);
+        if (drawingRelId != null)
+            sb.append("<drawing r:id=\"").append(drawingRelId).append("\"/>");
+        sb.append(XlsxWorkbookTables.buildTablePartsSnippet(ws, 0, sheetRels, tableCounter));
 
         sb.append("</worksheet>");
         return sb.toString().getBytes(StandardCharsets.UTF_8);
@@ -375,6 +498,7 @@ public final class XlsxWorkbookSerializer {
 
         // defined names
         Map<Integer, String[]> definedNames = XlsxWorkbookDefinedNames.loadDefinedNames(wbDoc);
+        XlsxWorkbookDefinedNames.loadUserDefinedNames(wbDoc, model);
 
         // parse each worksheet
         model.getWorksheets().clear();
@@ -390,7 +514,7 @@ public final class XlsxWorkbookSerializer {
             String relsPath = entryPath.substring(0, lastSlash + 1) + "_rels/"
                     + entryPath.substring(lastSlash + 1) + ".rels";
             Map<String, String> sheetRels = XlsxWorkbookArchiveHelpers.loadRels(entries, relsPath);
-            if (wsBytes != null) parseWorksheet(ws, wsBytes, sstArr, styleLoadResult, model, sheetRels);
+            if (wsBytes != null) parseWorksheet(ws, wsBytes, sstArr, styleLoadResult, model, sheetRels, entries);
             String[] dn = definedNames.get(i);
             if (dn != null) {
                 if (dn[0] != null) ws.getPageSetup().setPrintArea(XlsxWorkbookSerializerCommon.stripSheetPrefix(dn[0]));
@@ -399,6 +523,14 @@ public final class XlsxWorkbookSerializer {
             }
             model.getWorksheets().add(ws);
         }
+
+        // xl/theme/theme1.xml — preserve verbatim so theme-based fill/font colors round-trip correctly
+        byte[] themeBytes = entries.get("xl/theme/theme1.xml");
+        if (themeBytes != null) model.setRawThemeXml(themeBytes);
+
+        // preserve fonts[0] raw XML so the default font (family/scheme/color theme) round-trips correctly
+        if (styleLoadResult.rawDefaultFontXml != null)
+            model.setRawDefaultFontXml(styleLoadResult.rawDefaultFontXml);
 
         // docProps/core.xml
         byte[] coreBytes = entries.get("docProps/core.xml");
@@ -513,7 +645,8 @@ public final class XlsxWorkbookSerializer {
      */
     private static void parseWorksheet(WorksheetModel ws, byte[] bytes, String[] sst,
                                        XlsxWorkbookStyles.StyleLoadResult styleLoadResult, WorkbookModel wb,
-                                       Map<String, String> sheetRels) {
+                                       Map<String, String> sheetRels,
+                                       Map<String, byte[]> allEntries) {
         Set<Integer> dateStyleIndices = styleLoadResult.dateStyleIndices;
         Document doc = XlsxWorkbookArchiveHelpers.parse(bytes);
 
@@ -584,7 +717,9 @@ public final class XlsxWorkbookSerializer {
                     rec.setValue(s);
                     rec.setKind(CellValueKind.STRING);
                 } else if (!vText.isEmpty()) {
-                    double num = Double.parseDouble(vText);
+                    double num;
+                    try { num = Double.parseDouble(vText); }
+                    catch (NumberFormatException ignored) { rec.setValue(vText); rec.setKind(CellValueKind.STRING); continue; }
                     if (dateStyleIndices.contains(styleIdx)) {
                         LocalDateTime dt = DateSerialConverter.fromSerial(num, wb.getSettings().getDateSystem());
                         rec.setValue(dt);
@@ -624,5 +759,48 @@ public final class XlsxWorkbookSerializer {
         XlsxWorkbookPageSetup.loadPageSetup(ws, doc);
         XlsxWorkbookValidations.loadValidations(ws, doc);
         XlsxWorkbookHyperlinks.loadHyperlinks(ws, doc, sheetRels);
+        XlsxWorkbookDrawings.loadDrawings(ws, allEntries, sheetRels);
+
+        // Comments — two passes: first load comment text, then update visibility from VML
+        byte[] vmlBytes = null;
+        for (Map.Entry<String, String> rel : sheetRels.entrySet()) {
+            String target = rel.getValue();
+            if (target != null && target.contains("comments")) {
+                String partPath = resolveRelTarget("xl/worksheets/sheet1.xml", target);
+                byte[] cBytes = allEntries.get(partPath);
+                if (cBytes != null) XlsxWorkbookComments.loadComments(ws, XlsxWorkbookArchiveHelpers.parse(cBytes));
+            }
+            if (target != null && target.contains("vmlDrawing")) {
+                String partPath = resolveRelTarget("xl/worksheets/sheet1.xml", target);
+                vmlBytes = allEntries.get(partPath);
+            }
+        }
+        if (vmlBytes != null) XlsxWorkbookComments.loadVmlVisibility(ws, vmlBytes);
+
+        // Tables — find via <tableParts> elements then resolve rels
+        NodeList tpNodes = doc.getElementsByTagNameNS("*", "tablePart");
+        for (int i = 0; i < tpNodes.getLength(); i++) {
+            Element tpe = (Element) tpNodes.item(i);
+            String rId = tpe.getAttribute("r:id");
+            if (rId.isEmpty()) rId = tpe.getAttributeNS(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+            String target = sheetRels.get(rId);
+            if (target == null) continue;
+            String partPath = resolveRelTarget("xl/worksheets/sheet1.xml", target);
+            byte[] tBytes = allEntries.get(partPath);
+            if (tBytes != null) XlsxWorkbookTables.loadTable(ws, XlsxWorkbookArchiveHelpers.parse(tBytes));
+        }
+    }
+
+    private static String resolveRelTarget(String baseEntry, String target) {
+        if (target.startsWith("/")) return target.substring(1);
+        String base = baseEntry.contains("/") ? baseEntry.substring(0, baseEntry.lastIndexOf('/') + 1) : "";
+        String[] parts = (base + target).split("/");
+        java.util.Deque<String> stack = new java.util.ArrayDeque<>();
+        for (String p : parts) {
+            if ("..".equals(p)) { if (!stack.isEmpty()) stack.pollLast(); }
+            else if (!p.isEmpty() && !".".equals(p)) stack.addLast(p);
+        }
+        return String.join("/", stack);
     }
 }

@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit 5 tests for Style API â€” ST-* test cases.
+ * JUnit 5 tests for Style API â€?ST-* test cases.
  */
 class StyleTest {
 
@@ -154,8 +154,8 @@ class StyleTest {
     @Test
     void ST_12_wrapTextRoundtrips() {
         Style style = new Style();
-        style.setWrapText(true);
-        assertTrue(style.isWrapText());
+        style.setTextWrapped(true);
+        assertTrue(style.isTextWrapped());
     }
 
     /**
@@ -174,8 +174,8 @@ class StyleTest {
     @Test
     void ST_14_textRotationRoundtrips() {
         Style style = new Style();
-        style.setTextRotation(45);
-        assertEquals(45, style.getTextRotation());
+        style.setRotationAngle(45);
+        assertEquals(45, style.getRotationAngle());
     }
 
     /**
@@ -185,7 +185,7 @@ class StyleTest {
     void ST_15_shrinkToFitRoundtrips() {
         Style style = new Style();
         style.setShrinkToFit(true);
-        assertTrue(style.isShrinkToFit());
+        assertTrue(style.getShrinkToFit());
     }
 
     /**
@@ -554,12 +554,12 @@ class StyleTest {
     @Test
     void ST_57_hiddenFlagRoundtrips() {
         Style style = new Style();
-        style.setHidden(true);
-        assertTrue(style.isHidden());
+        style.setFormulaHidden(true);
+        assertTrue(style.isFormulaHidden());
     }
 
     // =========================================================================
-    // 2.7 Style â€” XLSX Round-Trip
+    // 2.7 Style â€?XLSX Round-Trip
     // =========================================================================
 
     /**
@@ -671,12 +671,12 @@ class StyleTest {
                 Cell cell = wb.getWorksheets().get(0).getCells().get("A1");
                 cell.putValue("Wrap");
                 Style style = cell.getStyle();
-                style.setWrapText(true);
+                style.setTextWrapped(true);
                 cell.setStyle(style);
                 wb.save(path);
             }
             Workbook loaded = new Workbook(path);
-            assertTrue(loaded.getWorksheets().get(0).getCells().get("A1").getStyle().isWrapText());
+            assertTrue(loaded.getWorksheets().get(0).getCells().get("A1").getStyle().isTextWrapped());
         }
     }
 
@@ -916,14 +916,14 @@ class StyleTest {
 
                 wb.save(path);
             }
-            // Both cells should reference the same XF index â€” verify by reading back
+            // Both cells should reference the same XF index â€?verify by reading back
             Workbook loaded = new Workbook(path);
             assertTrue(loaded.getWorksheets().get(0).getCells().get("A1").getStyle().getFont().getBold());
             assertTrue(loaded.getWorksheets().get(0).getCells().get("B1").getStyle().getFont().getBold());
 
             // Verify styles.xml doesn't have duplicate XF entries
             String stylesXml = ZipPackageHelper.readEntryText(path, "xl/styles.xml");
-            // Count occurrences of <xf (inside cellXfs) â€” with dedup there should be exactly 2 (default + 1 bold)
+            // Count occurrences of <xf (inside cellXfs) â€?with dedup there should be exactly 2 (default + 1 bold)
             int xfCount = countOccurrences(stylesXml.substring(stylesXml.indexOf("<cellXfs")), "<xf ");
             assertEquals(2, xfCount, "Expected 2 XF entries (default + 1 bold, deduplicated)");
         }
@@ -962,17 +962,17 @@ class StyleTest {
                 Cell cell = wb.getWorksheets().get(0).getCells().get("A1");
                 cell.putValue("Hidden");
                 Style style = cell.getStyle();
-                style.setHidden(true);
+                style.setFormulaHidden(true);
                 cell.setStyle(style);
                 wb.save(path);
             }
             Workbook loaded = new Workbook(path);
-            assertTrue(loaded.getWorksheets().get(0).getCells().get("A1").getStyle().isHidden());
+            assertTrue(loaded.getWorksheets().get(0).getCells().get("A1").getStyle().isFormulaHidden());
         }
     }
 
     // =========================================================================
-    // 2.8 Integration: Write All Style Properties â†’ Verify via API and POI
+    // 2.8 Integration: Write All Style Properties â†?Verify via API and POI
     // =========================================================================
 
     /**
@@ -1014,7 +1014,7 @@ class StyleTest {
                 // ST-85: Wrap text
                 {
                     Cell c = cells.get("A6"); c.putValue("Wrap");
-                    Style s = c.getStyle(); s.setWrapText(true); c.setStyle(s);
+                    Style s = c.getStyle(); s.setTextWrapped(true); c.setStyle(s);
                 }
                 // ST-86: THIN border all 4 sides
                 {
@@ -1073,7 +1073,7 @@ class StyleTest {
                     sc.setForegroundColor(Color.fromArgb(255, 0, 255, 0));
                     c13.setStyle(sc);
                 }
-                // ST-93: Style de-duplication â€” A14 and B14 same style
+                // ST-93: Style de-duplication â€?A14 and B14 same style
                 {
                     Cell a14 = cells.get("A14"); a14.putValue("Same1");
                     Style sd = a14.getStyle(); sd.getFont().setBold(true); sd.getFont().setSize(12.0); a14.setStyle(sd);
@@ -1109,7 +1109,7 @@ class StyleTest {
             assertEquals(HorizontalAlignmentType.CENTER, cells.get("A5").getStyle().getHorizontalAlignment());
 
             // ST-85
-            assertTrue(cells.get("A6").getStyle().isWrapText());
+            assertTrue(cells.get("A6").getStyle().isTextWrapped());
 
             // ST-86
             assertEquals(BorderStyleType.THIN, cells.get("A7").getStyle().getBorders().getTop().getLineStyle());
@@ -1137,7 +1137,7 @@ class StyleTest {
             // ST-91
             assertFalse(cells.get("A12").getStyle().isLocked());
 
-            // ST-92 â€” each cell style differs
+            // ST-92 â€?each cell style differs
             assertTrue(cells.get("A13").getStyle().getFont().getBold());
             assertEquals(14.0, cells.get("A13").getStyle().getFont().getSize(), 1e-9);
             assertTrue(cells.get("B13").getStyle().getFont().getItalic());
@@ -1145,7 +1145,7 @@ class StyleTest {
             assertEquals(BorderStyleType.THIN, cells.get("C13").getStyle().getBorders().getLeft().getLineStyle());
             assertEquals(FillPattern.SOLID, cells.get("C13").getStyle().getPattern());
 
-            // ST-93 â€” both cells have same style after reload
+            // ST-93 â€?both cells have same style after reload
             assertTrue(cells.get("A14").getStyle().getFont().getBold());
             assertTrue(cells.get("B14").getStyle().getFont().getBold());
             assertEquals(cells.get("A14").getStyle().getFont().getSize(),

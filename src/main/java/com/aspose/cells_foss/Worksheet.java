@@ -1,5 +1,6 @@
 package com.aspose.cells_foss;
 
+import com.aspose.cells_foss.core.CellAddress;
 import com.aspose.cells_foss.core.WorksheetModel;
 
 /**
@@ -15,6 +16,11 @@ public class Worksheet {
     private final HyperlinkCollection hyperlinks;
     private final AutoFilter autoFilter;
     private final ConditionalFormattingCollection conditionalFormattings;
+    private final CommentCollection comments;
+    private final PictureCollection pictures;
+    private final ShapeCollection shapes;
+    private final ChartCollection charts;
+    private final ListObjectCollection listObjects;
 
     /**
      * Initializes a new Worksheet instance.
@@ -31,6 +37,12 @@ public class Worksheet {
         this.hyperlinks = new HyperlinkCollection(model.getHyperlinks());
         this.autoFilter = new AutoFilter(model.getAutoFilter());
         this.conditionalFormattings = new ConditionalFormattingCollection(model.getConditionalFormattings());
+        this.comments = new CommentCollection(model.getComments());
+        this.pictures = new PictureCollection(model.getPictures());
+        this.shapes = new ShapeCollection(model.getShapes());
+        this.charts = new ChartCollection(model.getCharts());
+        this.listObjects = new ListObjectCollection(model.getListObjects());
+        this.listObjects.setCells(this.cells);
     }
 
     /**
@@ -210,6 +222,78 @@ public class Worksheet {
      */
     public ConditionalFormattingCollection getConditionalFormattings() { return conditionalFormattings; }
 
+    /** Returns the cell comments collection. */
+    public CommentCollection getComments() { return comments; }
+
+    /** Returns the embedded pictures collection. */
+    public PictureCollection getPictures() { return pictures; }
+    /** Returns the collection of drawing objects (shapes) on this worksheet. */
+    public ShapeCollection getShapes() { return shapes; }
+
+    /** Returns the embedded charts collection. */
+    public ChartCollection getCharts() { return charts; }
+
+    /** Returns the Excel tables (ListObjects) collection. */
+    public ListObjectCollection getListObjects() { return listObjects; }
+
+    // =========================================================================
+    // Freeze panes
+    // =========================================================================
+
+    /**
+     * Freezes panes at the specified cell in the worksheet.
+     * @param row zero-based row index of the first unfrozen row
+     * @param column zero-based column index of the first unfrozen column
+     * @param freezedRows number of rows to freeze from the top
+     * @param freezedCols number of columns to freeze from the left
+     */
+    public void freezePanes(int row, int column, int freezedRows, int freezedCols) {
+        if (freezedRows < 0) throw new CellsException("freezedRows must be non-negative.");
+        if (freezedCols < 0) throw new CellsException("freezedCols must be non-negative.");
+        model.getView().setFreezeRow(freezedRows);
+        model.getView().setFreezeColumn(freezedCols);
+    }
+
+    /**
+     * Freezes panes at the specified cell in the worksheet.
+     * @param cellName name of the top-left cell of the unfrozen area (e.g. "B2")
+     * @param freezedRows number of rows to freeze from the top
+     * @param freezedCols number of columns to freeze from the left
+     */
+    public void freezePanes(String cellName, int freezedRows, int freezedCols) {
+        if (cellName == null || cellName.isBlank()) throw new CellsException("cellName must be non-empty.");
+        CellAddress addr = CellAddress.parse(cellName);
+        freezePanes(addr.getRowIndex(), addr.getColumnIndex(), freezedRows, freezedCols);
+    }
+
+    /**
+     * Unfreezes all frozen panes in the worksheet.
+     */
+    public void unFreezePanes() {
+        model.getView().setFreezeRow(0);
+        model.getView().setFreezeColumn(0);
+    }
+
+    /**
+     * Returns whether any panes are currently frozen.
+     * @return the requested result
+     */
+    public boolean isFrozen() {
+        return model.getView().getFreezeRow() > 0 || model.getView().getFreezeColumn() > 0;
+    }
+
+    /**
+     * Returns the number of rows frozen from the top. Zero means no row freeze.
+     * @return the requested result
+     */
+    public int getFreezedRows() { return model.getView().getFreezeRow(); }
+
+    /**
+     * Returns the number of columns frozen from the left. Zero means no column freeze.
+     * @return the requested result
+     */
+    public int getFreezedColumns() { return model.getView().getFreezeColumn(); }
+
     /**
      * Enables protection for the current object.
      */
@@ -221,6 +305,6 @@ public class Worksheet {
      * Disables protection for the current object.
      */
     public void unprotect() {
-        model.getProtection().setIsProtected(false);
+        model.getProtection().clear();
     }
 }

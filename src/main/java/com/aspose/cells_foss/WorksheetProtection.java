@@ -4,304 +4,144 @@ import com.aspose.cells_foss.core.WorksheetProtectionModel;
 
 /**
  * Represents protection settings for a worksheet.
+ * Boolean allow-properties follow the Aspose.Cells convention: {@code true} means
+ * the operation IS allowed (i.e. NOT restricted), {@code false} means it is restricted.
+ * This is the inverse of the raw OOXML {@code sheetProtection} attribute values.
  */
 public final class WorksheetProtection {
     private final WorksheetProtectionModel model;
 
-    /**
-     * Initializes a new WorksheetProtection instance.
-     * @param model model
-     */
     WorksheetProtection(WorksheetProtectionModel model) {
         this.model = model;
     }
 
-    /**
-     * Returns the protected.
-     * @return the requested result
-     */
-    public boolean getIsProtected() {
+    /** Returns {@code true} if the worksheet is protected. */
+    public boolean isProtected() {
         return model.getIsProtected();
     }
 
-    /**
-     * Sets the protected.
-     * @param isProtected is protected
-     */
-    public void setIsProtected(boolean isProtected) {
-        model.setIsProtected(isProtected);
+    /** Returns {@code true} if editing objects (shapes, charts) is allowed. */
+    public boolean getAllowEditingObject() { return !model.getObjects(); }
+    /** Sets whether editing objects is allowed. Setting to {@code false} also marks the sheet protected. */
+    public void setAllowEditingObject(boolean allow) {
+        model.setObjects(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the objects.
-     * @return the requested result
-     */
-    public boolean getObjects() {
-        return model.getObjects();
+    /** Returns {@code true} if editing scenarios is allowed. */
+    public boolean getAllowEditingScenario() { return !model.getScenarios(); }
+    /** Sets whether editing scenarios is allowed. */
+    public void setAllowEditingScenario(boolean allow) {
+        model.setScenarios(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the objects.
-     * @param objects objects
-     */
-    public void setObjects(boolean objects) {
-        model.setObjects(objects);
-        markProtectedWhenEnabled(objects);
+    /** Returns {@code true} if formatting cells is allowed. */
+    public boolean getAllowFormattingCell() { return !model.getFormatCells(); }
+    /** Sets whether formatting cells is allowed. */
+    public void setAllowFormattingCell(boolean allow) {
+        model.setFormatCells(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the scenarios.
-     * @return the requested result
-     */
-    public boolean getScenarios() {
-        return model.getScenarios();
+    /** Returns {@code true} if formatting columns is allowed. */
+    public boolean getAllowFormattingColumn() { return !model.getFormatColumns(); }
+    /** Sets whether formatting columns is allowed. */
+    public void setAllowFormattingColumn(boolean allow) {
+        model.setFormatColumns(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the scenarios.
-     * @param scenarios scenarios
-     */
-    public void setScenarios(boolean scenarios) {
-        model.setScenarios(scenarios);
-        markProtectedWhenEnabled(scenarios);
+    /** Returns {@code true} if formatting rows is allowed. */
+    public boolean getAllowFormattingRow() { return !model.getFormatRows(); }
+    /** Sets whether formatting rows is allowed. */
+    public void setAllowFormattingRow(boolean allow) {
+        model.setFormatRows(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the format cells.
-     * @return the requested result
-     */
-    public boolean getFormatCells() {
-        return model.getFormatCells();
+    /** Returns {@code true} if inserting columns is allowed. */
+    public boolean getAllowInsertingColumn() { return !model.getInsertColumns(); }
+    /** Sets whether inserting columns is allowed. */
+    public void setAllowInsertingColumn(boolean allow) {
+        model.setInsertColumns(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the format cells.
-     * @param formatCells format cells
-     */
-    public void setFormatCells(boolean formatCells) {
-        model.setFormatCells(formatCells);
-        markProtectedWhenEnabled(formatCells);
+    /** Returns {@code true} if inserting rows is allowed. */
+    public boolean getAllowInsertingRow() { return !model.getInsertRows(); }
+    /** Sets whether inserting rows is allowed. */
+    public void setAllowInsertingRow(boolean allow) {
+        model.setInsertRows(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the format columns.
-     * @return the requested result
-     */
-    public boolean getFormatColumns() {
-        return model.getFormatColumns();
+    /** Returns {@code true} if inserting hyperlinks is allowed. */
+    public boolean getAllowInsertingHyperlink() { return !model.getInsertHyperlinks(); }
+    /** Sets whether inserting hyperlinks is allowed. */
+    public void setAllowInsertingHyperlink(boolean allow) {
+        model.setInsertHyperlinks(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the format columns.
-     * @param formatColumns format columns
-     */
-    public void setFormatColumns(boolean formatColumns) {
-        model.setFormatColumns(formatColumns);
-        markProtectedWhenEnabled(formatColumns);
+    /** Returns {@code true} if deleting columns is allowed. */
+    public boolean getAllowDeletingColumn() { return !model.getDeleteColumns(); }
+    /** Sets whether deleting columns is allowed. */
+    public void setAllowDeletingColumn(boolean allow) {
+        model.setDeleteColumns(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the format rows.
-     * @return the requested result
-     */
-    public boolean getFormatRows() {
-        return model.getFormatRows();
+    /** Returns {@code true} if deleting rows is allowed. */
+    public boolean getAllowDeletingRow() { return !model.getDeleteRows(); }
+    /** Sets whether deleting rows is allowed. */
+    public void setAllowDeletingRow(boolean allow) {
+        model.setDeleteRows(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the format rows.
-     * @param formatRows format rows
-     */
-    public void setFormatRows(boolean formatRows) {
-        model.setFormatRows(formatRows);
-        markProtectedWhenEnabled(formatRows);
+    /** Returns {@code true} if selecting locked cells is allowed. */
+    public boolean getAllowSelectingLockedCell() { return !model.getSelectLockedCells(); }
+    /** Sets whether selecting locked cells is allowed. */
+    public void setAllowSelectingLockedCell(boolean allow) {
+        model.setSelectLockedCells(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the insert columns.
-     * @return the requested result
-     */
-    public boolean getInsertColumns() {
-        return model.getInsertColumns();
+    /** Returns {@code true} if sorting is allowed. */
+    public boolean getAllowSorting() { return !model.getSort(); }
+    /** Sets whether sorting is allowed. */
+    public void setAllowSorting(boolean allow) {
+        model.setSort(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the insert columns.
-     * @param insertColumns insert columns
-     */
-    public void setInsertColumns(boolean insertColumns) {
-        model.setInsertColumns(insertColumns);
-        markProtectedWhenEnabled(insertColumns);
+    /** Returns {@code true} if using AutoFilter is allowed. */
+    public boolean getAllowFiltering() { return !model.getAutoFilter(); }
+    /** Sets whether using AutoFilter is allowed. */
+    public void setAllowFiltering(boolean allow) {
+        model.setAutoFilter(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the insert rows.
-     * @return the requested result
-     */
-    public boolean getInsertRows() {
-        return model.getInsertRows();
+    /** Returns {@code true} if using pivot tables is allowed. */
+    public boolean getAllowUsingPivotTable() { return !model.getPivotTables(); }
+    /** Sets whether using pivot tables is allowed. */
+    public void setAllowUsingPivotTable(boolean allow) {
+        model.setPivotTables(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Sets the insert rows.
-     * @param insertRows insert rows
-     */
-    public void setInsertRows(boolean insertRows) {
-        model.setInsertRows(insertRows);
-        markProtectedWhenEnabled(insertRows);
+    /** Returns {@code true} if selecting unlocked cells is allowed. */
+    public boolean getAllowSelectingUnlockedCell() { return !model.getSelectUnlockedCells(); }
+    /** Sets whether selecting unlocked cells is allowed. */
+    public void setAllowSelectingUnlockedCell(boolean allow) {
+        model.setSelectUnlockedCells(!allow);
+        if (!allow) model.setIsProtected(true);
     }
 
-    /**
-     * Returns the insert hyperlinks.
-     * @return the requested result
-     */
-    public boolean getInsertHyperlinks() {
-        return model.getInsertHyperlinks();
-    }
-
-    /**
-     * Sets the insert hyperlinks.
-     * @param insertHyperlinks insert hyperlinks
-     */
-    public void setInsertHyperlinks(boolean insertHyperlinks) {
-        model.setInsertHyperlinks(insertHyperlinks);
-        markProtectedWhenEnabled(insertHyperlinks);
-    }
-
-    /**
-     * Returns the delete columns.
-     * @return the requested result
-     */
-    public boolean getDeleteColumns() {
-        return model.getDeleteColumns();
-    }
-
-    /**
-     * Sets the delete columns.
-     * @param deleteColumns delete columns
-     */
-    public void setDeleteColumns(boolean deleteColumns) {
-        model.setDeleteColumns(deleteColumns);
-        markProtectedWhenEnabled(deleteColumns);
-    }
-
-    /**
-     * Returns the delete rows.
-     * @return the requested result
-     */
-    public boolean getDeleteRows() {
-        return model.getDeleteRows();
-    }
-
-    /**
-     * Sets the delete rows.
-     * @param deleteRows delete rows
-     */
-    public void setDeleteRows(boolean deleteRows) {
-        model.setDeleteRows(deleteRows);
-        markProtectedWhenEnabled(deleteRows);
-    }
-
-    /**
-     * Returns the select locked cells.
-     * @return the requested result
-     */
-    public boolean getSelectLockedCells() {
-        return model.getSelectLockedCells();
-    }
-
-    /**
-     * Sets the select locked cells.
-     * @param selectLockedCells select locked cells
-     */
-    public void setSelectLockedCells(boolean selectLockedCells) {
-        model.setSelectLockedCells(selectLockedCells);
-        markProtectedWhenEnabled(selectLockedCells);
-    }
-
-    /**
-     * Returns the sort.
-     * @return the requested result
-     */
-    public boolean getSort() {
-        return model.getSort();
-    }
-
-    /**
-     * Sets the sort.
-     * @param sort sort
-     */
-    public void setSort(boolean sort) {
-        model.setSort(sort);
-        markProtectedWhenEnabled(sort);
-    }
-
-    /**
-     * Returns the auto filter.
-     * @return the requested result
-     */
-    public boolean getAutoFilter() {
-        return model.getAutoFilter();
-    }
-
-    /**
-     * Sets the auto filter.
-     * @param autoFilter auto filter
-     */
-    public void setAutoFilter(boolean autoFilter) {
-        model.setAutoFilter(autoFilter);
-        markProtectedWhenEnabled(autoFilter);
-    }
-
-    /**
-     * Returns the pivot tables.
-     * @return the requested result
-     */
-    public boolean getPivotTables() {
-        return model.getPivotTables();
-    }
-
-    /**
-     * Sets the pivot tables.
-     * @param pivotTables pivot tables
-     */
-    public void setPivotTables(boolean pivotTables) {
-        model.setPivotTables(pivotTables);
-        markProtectedWhenEnabled(pivotTables);
-    }
-
-    /**
-     * Returns the select unlocked cells.
-     * @return the requested result
-     */
-    public boolean getSelectUnlockedCells() {
-        return model.getSelectUnlockedCells();
-    }
-
-    /**
-     * Sets the select unlocked cells.
-     * @param selectUnlockedCells select unlocked cells
-     */
-    public void setSelectUnlockedCells(boolean selectUnlockedCells) {
-        model.setSelectUnlockedCells(selectUnlockedCells);
-        markProtectedWhenEnabled(selectUnlockedCells);
-    }
-
-    /**
-     * Resets the current state to its defaults.
-     */
+    /** Resets all protection settings to defaults. */
     void reset() {
         model.clear();
-    }
-
-    /**
-     * Processes mark protected when enabled.
-     * @param value value to apply
-     */
-    private void markProtectedWhenEnabled(boolean value) {
-        // Handle the relevant branch before the state changes.
-        if (value) {
-            model.setIsProtected(true);
-        }
     }
 }

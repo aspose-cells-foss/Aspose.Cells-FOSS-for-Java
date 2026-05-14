@@ -78,7 +78,9 @@ public final class Validation {
      * @return the requested result
      */
     public String getFormula1() {
-        return model.getFormula1() != null ? model.getFormula1() : "";
+        String v = model.getFormula1();
+        if (v == null) return "";
+        return v.startsWith("=") ? v.substring(1) : v;
     }
 
     /**
@@ -94,7 +96,9 @@ public final class Validation {
      * @return the requested result
      */
     public String getFormula2() {
-        return model.getFormula2() != null ? model.getFormula2() : "";
+        String v = model.getFormula2();
+        if (v == null) return "";
+        return v.startsWith("=") ? v.substring(1) : v;
     }
 
     /**

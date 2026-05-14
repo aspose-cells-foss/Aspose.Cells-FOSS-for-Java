@@ -1,8 +1,5 @@
 package com.aspose.cells_foss.core;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 
 /**
  * Represents a cell address with row and column indices.
@@ -120,15 +117,12 @@ public final class CellAddress {
      */
     private static String columnIndexToName(int columnIndex) {
         int index = columnIndex + 1;
-        Queue<Character> characters = new ArrayDeque<>();
-        // Walk the current collection so every entry is processed consistently.
+        StringBuilder result = new StringBuilder();
         while (index > 0) {
             index--;
-            characters.add((char) ('A' + (index % 26)));
+            result.append((char) ('A' + (index % 26)));
             index /= 26;
         }
-        StringBuilder result = new StringBuilder();
-        while (!characters.isEmpty()) result.append(characters.poll());
-        return result.toString();
+        return result.reverse().toString();
     }
 }

@@ -11,6 +11,8 @@ public final class FontValue {
     private boolean underline;
     private boolean strikeThrough;
     private ColorValue color;
+    /** Raw XML of the entire &lt;font&gt; element when it uses non-RGB color or extra attributes (family, scheme). */
+    private String rawFontXml;
 
     /**
      * Returns the name.
@@ -93,6 +95,9 @@ public final class FontValue {
      * Creates a copy of this instance.
      * @return the computed result
      */
+    public String getRawFontXml() { return rawFontXml; }
+    public void setRawFontXml(String rawFontXml) { this.rawFontXml = rawFontXml; }
+
     public FontValue clone() {
         FontValue cloned = new FontValue();
         cloned.name = this.name;
@@ -102,6 +107,7 @@ public final class FontValue {
         cloned.underline = this.underline;
         cloned.strikeThrough = this.strikeThrough;
         cloned.color = this.color;
+        cloned.rawFontXml = this.rawFontXml;
         return cloned;
     }
 }

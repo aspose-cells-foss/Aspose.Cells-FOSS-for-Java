@@ -26,8 +26,8 @@ final class XlsxWorkbookDefinedNames {
      */
     static void buildDefinedNamesXml(WorkbookModel model, StringBuilder sb) {
         List<WorksheetModel> sheets = model.getWorksheets();
-        boolean hasDefinedNames = false;
-        // Walk the current collection so every entry is processed consistently.
+        List<DefinedNameModel> userNames = model.getDefinedNames();
+        boolean hasDefinedNames = !userNames.isEmpty();
         for (WorksheetModel ws : sheets) {
             PageSetupModel ps = ws.getPageSetup();
             if (ps.getPrintArea() != null && !ps.getPrintArea().isEmpty()) hasDefinedNames = true;
@@ -37,6 +37,17 @@ final class XlsxWorkbookDefinedNames {
         if (!hasDefinedNames) return;
 
         sb.append("<definedNames>");
+        // User-defined names
+        for (DefinedNameModel dn : userNames) {
+            sb.append("<definedName name=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(dn.getName())).append("\"");
+            if (dn.getLocalSheetIndex() != null)
+                sb.append(" localSheetId=\"").append(dn.getLocalSheetIndex()).append("\"");
+            if (dn.getHidden()) sb.append(" hidden=\"1\"");
+            if (dn.getComment() != null && !dn.getComment().isEmpty())
+                sb.append(" comment=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(dn.getComment())).append("\"");
+            sb.append(">").append(XlsxWorkbookSerializerCommon.xmlText(dn.getFormula())).append("</definedName>");
+        }
+        // Print area / print titles
         for (int i = 0; i < sheets.size(); i++) {
             PageSetupModel ps = sheets.get(i).getPageSetup();
             String sheetName = sheets.get(i).getName();
@@ -64,6 +75,25 @@ final class XlsxWorkbookDefinedNames {
     // =========================================================================
     // Load
     // =========================================================================
+
+    /** Loads user-defined names (non-print-related) from the workbook document into the model. */
+    static void loadUserDefinedNames(Document wbDoc, WorkbookModel model) {
+        NodeList nodes = wbDoc.getElementsByTagNameNS("*", "definedName");
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Element el = (Element) nodes.item(i);
+            String name = el.getAttribute("name");
+            if (name.startsWith("_xlnm.")) continue;
+            DefinedNameModel dn = new DefinedNameModel();
+            dn.setName(name);
+            dn.setFormula(el.getTextContent().trim());
+            String localId = el.getAttribute("localSheetId");
+            if (!localId.isEmpty()) dn.setLocalSheetIndex(Integer.parseInt(localId));
+            dn.setHidden("1".equals(el.getAttribute("hidden")));
+            String comment = el.getAttribute("comment");
+            if (!comment.isEmpty()) dn.setComment(comment);
+            model.getDefinedNames().add(dn);
+        }
+    }
 
     /** Returns a map of localSheetId → [printArea, titleRows, titleCols]. */
     static Map<Integer, String[]> loadDefinedNames(Document wbDoc) {

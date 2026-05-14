@@ -8,6 +8,8 @@ public final class StyleValue {
     private FillPatternKind pattern;
     private ColorValue foregroundColor;
     private ColorValue backgroundColor;
+    /** Raw XML for the entire &lt;fill&gt; element when the fill uses non-RGB colors (theme/tint/indexed). */
+    private String rawFillXml;
     private BordersValue borders = new BordersValue();
     private AlignmentValue alignment = new AlignmentValue();
     private ProtectionValue protection = new ProtectionValue();
@@ -108,6 +110,9 @@ public final class StyleValue {
      */
     public void setNumberFormat(NumberFormatValue numberFormat) { this.numberFormat = numberFormat; }
 
+    public String getRawFillXml() { return rawFillXml; }
+    public void setRawFillXml(String rawFillXml) { this.rawFillXml = rawFillXml; }
+
     /**
      * Creates a copy of this instance.
      * @return the computed result
@@ -118,6 +123,7 @@ public final class StyleValue {
         cloned.pattern = this.pattern;
         cloned.foregroundColor = this.foregroundColor;
         cloned.backgroundColor = this.backgroundColor;
+        cloned.rawFillXml = this.rawFillXml;
         cloned.borders = this.borders.clone();
         cloned.alignment = this.alignment.clone();
         cloned.protection = this.protection.clone();

@@ -20,6 +20,7 @@ public class Workbook implements AutoCloseable {
     private final DocumentProperties documentProperties;
     private final DefinedNameCollection definedNames;
     private final LoadDiagnostics loadDiagnostics;
+    private final CalculationProperties calculationProperties;
 
     /**
      * Initializes a new Workbook instance.
@@ -28,10 +29,11 @@ public class Workbook implements AutoCloseable {
         this.model = new WorkbookModel();
         this.worksheets = new WorksheetCollection(this);
         this.settings = new WorkbookSettings(model.getSettings());
-        this.properties = new WorkbookProperties(model.getProperties());
+        this.properties = new WorkbookProperties(model.getProperties(), model);
         this.documentProperties = new DocumentProperties(model.getDocumentProperties());
         this.definedNames = new DefinedNameCollection(this);
         this.loadDiagnostics = new LoadDiagnostics();
+        this.calculationProperties = this.properties.getCalculation();
     }
 
     /**
@@ -110,6 +112,9 @@ public class Workbook implements AutoCloseable {
      * @return the requested result
      */
     public LoadDiagnostics getLoadDiagnostics() { return loadDiagnostics; }
+
+    /** Returns the workbook calculation properties. */
+    public CalculationProperties getCalculationProperties() { return calculationProperties; }
 
     /**
      * Returns the model.
@@ -231,6 +236,8 @@ public class Workbook implements AutoCloseable {
             model.setActiveSheetIndex(loadedModel.getActiveSheetIndex());
             model.getProperties().copyFrom(loadedModel.getProperties());
             model.getDocumentProperties().copyFrom(loadedModel.getDocumentProperties());
+            model.setRawThemeXml(loadedModel.getRawThemeXml());
+            model.setRawDefaultFontXml(loadedModel.getRawDefaultFontXml());
         } catch (CellsException e) {
             throw e;
         } catch (Exception e) {

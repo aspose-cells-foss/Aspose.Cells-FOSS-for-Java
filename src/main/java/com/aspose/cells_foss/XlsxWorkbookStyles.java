@@ -47,12 +47,14 @@ final class XlsxWorkbookStyles {
 
         /**
          * Initializes a new StyleTable instance.
+         * @param rawDefaultFontXml raw XML of the source file's fonts[0], or null to use plain Calibri 11pt
          */
-        StyleTable() {
-            // Default font: Calibri 11pt
+        StyleTable(String rawDefaultFontXml) {
+            // Default font: use source file's fonts[0] when available (preserves family/scheme/color theme)
             FontValue defFont = new FontValue();
             defFont.setName("Calibri");
             defFont.setSize(11.0);
+            if (rawDefaultFontXml != null) defFont.setRawFontXml(rawDefaultFontXml);
             fonts.add(defFont);
             fontIdx.put(fontKey(defFont), 0);
 
@@ -88,8 +90,9 @@ final class XlsxWorkbookStyles {
 
             FillPatternKind pat = sv.getPattern() != null ? sv.getPattern() : FillPatternKind.NONE;
             ColorValue fg = sv.getForegroundColor(), bg = sv.getBackgroundColor();
-            int fillId = fillIdx.computeIfAbsent(fillKey(pat, fg, bg), k -> {
-                fills.add(new Object[]{pat, fg, bg}); return fills.size() - 1;
+            String rawFillXml = sv.getRawFillXml();
+            int fillId = fillIdx.computeIfAbsent(fillKey(pat, fg, bg, rawFillXml), k -> {
+                fills.add(new Object[]{pat, fg, bg, rawFillXml}); return fills.size() - 1;
             });
 
             BordersValue bv = sv.getBorders() != null ? sv.getBorders() : new BordersValue();
@@ -208,16 +211,20 @@ final class XlsxWorkbookStyles {
             // fonts
             sb.append("<fonts count=\"").append(fonts.size()).append("\">");
             for (FontValue fv : fonts) {
-                sb.append("<font>");
-                if (fv.getBold())          sb.append("<b/>");
-                if (fv.getItalic())        sb.append("<i/>");
-                if (fv.getStrikeThrough()) sb.append("<strike/>");
-                if (fv.getUnderline())     sb.append("<u/>");
-                sb.append("<sz val=\"").append(XlsxWorkbookSerializerCommon.fmt(fv.getSize())).append("\"/>");
-                if (fv.getColor() != null)
-                    sb.append("<color rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(fv.getColor())).append("\"/>");
-                sb.append("<name val=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(fv.getName() != null ? fv.getName() : "Calibri")).append("\"/>");
-                sb.append("</font>");
+                if (fv.getRawFontXml() != null) {
+                    sb.append(fv.getRawFontXml());
+                } else {
+                    sb.append("<font>");
+                    if (fv.getBold())          sb.append("<b/>");
+                    if (fv.getItalic())        sb.append("<i/>");
+                    if (fv.getStrikeThrough()) sb.append("<strike/>");
+                    if (fv.getUnderline())     sb.append("<u/>");
+                    sb.append("<sz val=\"").append(XlsxWorkbookSerializerCommon.fmt(fv.getSize())).append("\"/>");
+                    if (fv.getColor() != null)
+                        sb.append("<color rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(fv.getColor())).append("\"/>");
+                    sb.append("<name val=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(fv.getName() != null ? fv.getName() : "Calibri")).append("\"/>");
+                    sb.append("</font>");
+                }
             }
             sb.append("</fonts>");
 
@@ -226,10 +233,15 @@ final class XlsxWorkbookStyles {
             for (Object[] fill : fills) {
                 FillPatternKind p = (FillPatternKind) fill[0];
                 ColorValue fgc = (ColorValue) fill[1], bgc = (ColorValue) fill[2];
-                sb.append("<fill><patternFill patternType=\"").append(fillPatternName(p)).append("\">");
-                if (fgc != null) sb.append("<fgColor rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(fgc)).append("\"/>");
-                if (bgc != null) sb.append("<bgColor rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(bgc)).append("\"/>");
-                sb.append("</patternFill></fill>");
+                String rawFillXml = fill.length > 3 ? (String) fill[3] : null;
+                if (rawFillXml != null) {
+                    sb.append(rawFillXml);
+                } else {
+                    sb.append("<fill><patternFill patternType=\"").append(fillPatternName(p)).append("\">");
+                    if (fgc != null) sb.append("<fgColor rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(fgc)).append("\"/>");
+                    if (bgc != null) sb.append("<bgColor rgb=\"").append(XlsxWorkbookSerializerCommon.colorArgb(bgc)).append("\"/>");
+                    sb.append("</patternFill></fill>");
+                }
             }
             sb.append("</fills>");
 
@@ -341,14 +353,17 @@ final class XlsxWorkbookStyles {
         final Set<Integer> dateStyleIndices;
         final List<StyleValue> cellStyles;
         final List<StyleValue> dxfStyles;
+        final String rawDefaultFontXml;
         /**
          * Initializes a new StyleLoadResult instance.
          * @param d d
          * @param s s
          * @param dxf dxf
+         * @param rawDefaultFontXml raw XML of fonts[0] from source styles.xml
          */
-        StyleLoadResult(Set<Integer> d, List<StyleValue> s, List<StyleValue> dxf) {
+        StyleLoadResult(Set<Integer> d, List<StyleValue> s, List<StyleValue> dxf, String rawDefaultFontXml) {
             dateStyleIndices = d; cellStyles = s; dxfStyles = dxf;
+            this.rawDefaultFontXml = rawDefaultFontXml;
         }
     }
 
@@ -362,7 +377,7 @@ final class XlsxWorkbookStyles {
      * @return the requested result
      */
     static StyleTable buildStyleTable(WorkbookModel model) {
-        StyleTable t = new StyleTable();
+        StyleTable t = new StyleTable(model.getRawDefaultFontXml());
         // Walk the current collection so every entry is processed consistently.
         for (WorksheetModel ws : model.getWorksheets()) {
             for (Map.Entry<CellAddress, CellRecord> e : ws.getCells().entrySet()) {
@@ -394,7 +409,7 @@ final class XlsxWorkbookStyles {
         List<StyleValue> cellStyles = new ArrayList<>();
 
         byte[] bytes = entries.get("xl/styles.xml");
-        if (bytes == null) return new StyleLoadResult(dateIndices, cellStyles, new ArrayList<>());
+        if (bytes == null) return new StyleLoadResult(dateIndices, cellStyles, new ArrayList<>(), null);
 
         Document doc = XlsxWorkbookArchiveHelpers.parse(bytes);
 
@@ -431,16 +446,27 @@ final class XlsxWorkbookStyles {
                 fv.setUnderline(findChildEl(fontEl, "u") != null);
                 fv.setStrikeThrough(findChildEl(fontEl, "strike") != null);
                 Element colorEl = findChildEl(fontEl, "color");
+                boolean hasNonRgbColor = false;
                 if (colorEl != null) {
                     String rgb = colorEl.getAttribute("rgb");
-                    if (rgb.length() == 8) fv.setColor(parseArgbColor(rgb));
+                    if (rgb.length() == 8) {
+                        fv.setColor(parseArgbColor(rgb));
+                    } else {
+                        hasNonRgbColor = true; // theme/tint/indexed color
+                    }
                 }
+                boolean hasExtraAttrs = findChildEl(fontEl, "family") != null
+                    || findChildEl(fontEl, "scheme") != null
+                    || findChildEl(fontEl, "charset") != null
+                    || findChildEl(fontEl, "vertAlign") != null;
+                if (hasNonRgbColor || hasExtraAttrs)
+                    fv.setRawFontXml(fontElementToXml(fontEl));
                 fontList.add(fv);
             }
         }
         if (fontList.isEmpty()) { FontValue d = new FontValue(); d.setName("Calibri"); d.setSize(11.0); fontList.add(d); }
 
-        // Read fills
+        // Read fills — 4th element is raw XML for fills using theme/tint/indexed colors
         List<Object[]> fillList = new ArrayList<>();
         NodeList fillsEl = doc.getElementsByTagNameNS("*", "fills");
         if (fillsEl.getLength() > 0) {
@@ -449,17 +475,20 @@ final class XlsxWorkbookStyles {
                 if (!(kids.item(i) instanceof Element)) continue;
                 Element fillEl = (Element) kids.item(i);
                 Element pf = findChildEl(fillEl, "patternFill");
-                if (pf == null) { fillList.add(new Object[]{FillPatternKind.NONE, null, null}); continue; }
+                if (pf == null) { fillList.add(new Object[]{FillPatternKind.NONE, null, null, null}); continue; }
                 FillPatternKind pat = parseFillPatternType(pf.getAttribute("patternType"));
                 Element fgEl = findChildEl(pf, "fgColor"), bgEl = findChildEl(pf, "bgColor");
                 ColorValue fg = fgEl != null ? parseArgbColor(fgEl.getAttribute("rgb")) : null;
                 ColorValue bg = bgEl != null ? parseArgbColor(bgEl.getAttribute("rgb")) : null;
-                fillList.add(new Object[]{pat, fg, bg});
+                // If any color element exists but couldn't be parsed as RGB, preserve raw fill XML
+                boolean hasNonRgb = (fgEl != null && fg == null) || (bgEl != null && bg == null);
+                String rawFillXml = hasNonRgb ? fillElementToXml(pf) : null;
+                fillList.add(new Object[]{pat, fg, bg, rawFillXml});
             }
         }
         if (fillList.isEmpty()) {
-            fillList.add(new Object[]{FillPatternKind.NONE, null, null});
-            fillList.add(new Object[]{FillPatternKind.GRAY_125, null, null});
+            fillList.add(new Object[]{FillPatternKind.NONE, null, null, null});
+            fillList.add(new Object[]{FillPatternKind.GRAY_125, null, null, null});
         }
 
         // Read borders
@@ -505,6 +534,7 @@ final class XlsxWorkbookStyles {
                     sv.setPattern((FillPatternKind) fl[0]);
                     sv.setForegroundColor((ColorValue) fl[1]);
                     sv.setBackgroundColor((ColorValue) fl[2]);
+                    if (fl.length > 3) sv.setRawFillXml((String) fl[3]);
                 }
                 if (borderId < borderList.size()) sv.setBorders(borderList.get(borderId));
 
@@ -592,7 +622,8 @@ final class XlsxWorkbookStyles {
             }
         }
 
-        return new StyleLoadResult(dateIndices, cellStyles, dxfStyles);
+        String rawDefaultFontXml = !fontList.isEmpty() ? fontList.get(0).getRawFontXml() : null;
+        return new StyleLoadResult(dateIndices, cellStyles, dxfStyles, rawDefaultFontXml);
     }
 
     // =========================================================================
@@ -605,6 +636,7 @@ final class XlsxWorkbookStyles {
      * @return the computed result
      */
     private static String fontKey(FontValue fv) {
+        if (fv.getRawFontXml() != null) return "raw|" + fv.getRawFontXml();
         return fv.getName() + "|" + fv.getSize() + "|" + fv.getBold() + "|" + fv.getItalic()
              + "|" + fv.getUnderline() + "|" + fv.getStrikeThrough()
              + "|" + (fv.getColor() == null ? "null" : XlsxWorkbookSerializerCommon.colorArgb(fv.getColor()));
@@ -618,6 +650,11 @@ final class XlsxWorkbookStyles {
      * @return the computed result
      */
     private static String fillKey(FillPatternKind p, ColorValue fg, ColorValue bg) {
+        return fillKey(p, fg, bg, null);
+    }
+
+    private static String fillKey(FillPatternKind p, ColorValue fg, ColorValue bg, String rawFillXml) {
+        if (rawFillXml != null) return "raw|" + rawFillXml;
         return p + "|" + (fg == null ? "null" : XlsxWorkbookSerializerCommon.colorArgb(fg))
              + "|" + (bg == null ? "null" : XlsxWorkbookSerializerCommon.colorArgb(bg));
     }
@@ -791,6 +828,7 @@ final class XlsxWorkbookStyles {
         if (av.getTextRotation() != 0) sb.append(" textRotation=\"").append(av.getTextRotation()).append("\"");
         if (av.getShrinkToFit())     sb.append(" shrinkToFit=\"1\"");
         if (av.getReadingOrder() != 0) sb.append(" readingOrder=\"").append(av.getReadingOrder()).append("\"");
+        if (av.getRelativeIndent() != 0) sb.append(" relativeIndent=\"").append(av.getRelativeIndent()).append("\"");
         sb.append("/>");
     }
 
@@ -850,6 +888,54 @@ final class XlsxWorkbookStyles {
      * @param rgb rgb
      * @return the computed result
      */
+    /** Serializes a font element to a complete &lt;font&gt;…&lt;/font&gt; XML string, preserving all child elements verbatim. */
+    private static String fontElementToXml(Element fontEl) {
+        StringBuilder sb = new StringBuilder("<font>");
+        org.w3c.dom.NodeList children = fontEl.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            org.w3c.dom.Node n = children.item(i);
+            if (!(n instanceof Element)) continue;
+            Element child = (Element) n;
+            String localName = child.getLocalName();
+            sb.append("<").append(localName);
+            org.w3c.dom.NamedNodeMap attrs = child.getAttributes();
+            for (int j = 0; j < attrs.getLength(); j++) {
+                org.w3c.dom.Attr a = (org.w3c.dom.Attr) attrs.item(j);
+                sb.append(" ").append(a.getName()).append("=\"")
+                  .append(a.getValue().replace("&", "&amp;").replace("\"", "&quot;"))
+                  .append("\"");
+            }
+            sb.append("/>");
+        }
+        sb.append("</font>");
+        return sb.toString();
+    }
+
+    /** Serializes a patternFill element to a complete <fill>…</fill> XML string, preserving all color attributes verbatim. */
+    private static String fillElementToXml(Element pf) {
+        StringBuilder sb = new StringBuilder("<fill><patternFill");
+        String pt = pf.getAttribute("patternType");
+        if (!pt.isEmpty()) sb.append(" patternType=\"").append(pt).append("\"");
+        sb.append(">");
+        appendColorEl(sb, "fgColor", findChildEl(pf, "fgColor"));
+        appendColorEl(sb, "bgColor", findChildEl(pf, "bgColor"));
+        sb.append("</patternFill></fill>");
+        return sb.toString();
+    }
+
+    private static void appendColorEl(StringBuilder sb, String tag, Element el) {
+        if (el == null) return;
+        sb.append("<").append(tag);
+        org.w3c.dom.NamedNodeMap attrs = el.getAttributes();
+        for (int i = 0; i < attrs.getLength(); i++) {
+            org.w3c.dom.Attr a = (org.w3c.dom.Attr) attrs.item(i);
+            sb.append(" ").append(a.getName()).append("=\"")
+              .append(a.getValue().replace("&", "&amp;").replace("\"", "&quot;"))
+              .append("\"");
+        }
+        sb.append("/>");
+    }
+
     private static ColorValue parseArgbColor(String rgb) {
         // Handle the relevant branch before the state changes.
         if (rgb == null || rgb.length() < 8) return null;

@@ -17,6 +17,10 @@ public final class WorkbookModel {
     private StyleValue defaultStyle = StyleValue.getDefault().clone();
     private int activeSheetIndex = 0;
     private final List<DefinedNameModel> definedNames = new ArrayList<>();
+    /** Raw bytes of xl/theme/theme1.xml from the source file, preserved for round-trip fidelity. */
+    private byte[] rawThemeXml;
+    /** Raw XML of the default &lt;font&gt; element (fonts[0]) from the source styles.xml. */
+    private String rawDefaultFontXml;
 
     /**
      * Initializes a new WorkbookModel instance.
@@ -120,4 +124,10 @@ public final class WorkbookModel {
     public List<DefinedNameModel> getDefinedNames() {
         return definedNames;
     }
+
+    public byte[] getRawThemeXml() { return rawThemeXml; }
+    public void setRawThemeXml(byte[] rawThemeXml) { this.rawThemeXml = rawThemeXml; }
+
+    public String getRawDefaultFontXml() { return rawDefaultFontXml; }
+    public void setRawDefaultFontXml(String rawDefaultFontXml) { this.rawDefaultFontXml = rawDefaultFontXml; }
 }

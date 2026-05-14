@@ -9,6 +9,10 @@ public final class WorksheetViewModel {
     private boolean showZeros = true;
     private boolean rightToLeft;
     private int zoomScale = 100;
+    /** Number of rows frozen from the top (ySplit). Zero means no row freeze. */
+    private int freezeRow;
+    /** Number of columns frozen from the left (xSplit). Zero means no column freeze. */
+    private int freezeColumn;
 
     /**
      * Returns the show grid lines.
@@ -64,4 +68,26 @@ public final class WorksheetViewModel {
      * @param zoomScale zoom scale
      */
     public void setZoomScale(int zoomScale) { this.zoomScale = zoomScale; }
+
+    /**
+     * Returns the number of rows frozen from the top (ySplit). Zero means no row freeze.
+     * @return the requested result
+     */
+    public int getFreezeRow() { return freezeRow; }
+    /**
+     * Sets the number of rows frozen from the top.
+     * @param freezeRow freeze row count
+     */
+    public void setFreezeRow(int freezeRow) { this.freezeRow = freezeRow; }
+
+    /**
+     * Returns the number of columns frozen from the left (xSplit). Zero means no column freeze.
+     * @return the requested result
+     */
+    public int getFreezeColumn() { return freezeColumn; }
+    /**
+     * Sets the number of columns frozen from the left.
+     * @param freezeColumn freeze column count
+     */
+    public void setFreezeColumn(int freezeColumn) { this.freezeColumn = freezeColumn; }
 }

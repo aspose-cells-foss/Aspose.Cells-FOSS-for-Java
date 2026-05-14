@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit 5 tests for the AutoFilter API â€” AF-* test cases.
+ * JUnit 5 tests for the AutoFilter API â€?AF-* test cases.
  */
 class AutoFilterTest {
 
@@ -91,9 +91,9 @@ class AutoFilterTest {
             ws.getAutoFilter().getFilterColumns().add(2);
             ws.getAutoFilter().getFilterColumns().add(0);
             ws.getAutoFilter().getFilterColumns().add(1);
-            assertEquals(0, ws.getAutoFilter().getFilterColumns().get(0).getColumnIndex());
-            assertEquals(1, ws.getAutoFilter().getFilterColumns().get(1).getColumnIndex());
-            assertEquals(2, ws.getAutoFilter().getFilterColumns().get(2).getColumnIndex());
+            assertEquals(0, ws.getAutoFilter().getFilterColumns().get(0).getFieldIndex());
+            assertEquals(1, ws.getAutoFilter().getFilterColumns().get(1).getFieldIndex());
+            assertEquals(2, ws.getAutoFilter().getFilterColumns().get(2).getFieldIndex());
         }
     }
 
@@ -121,7 +121,7 @@ class AutoFilterTest {
             ws.getAutoFilter().getFilterColumns().add(1);
             ws.getAutoFilter().getFilterColumns().removeAt(0);
             assertEquals(1, ws.getAutoFilter().getFilterColumns().getCount());
-            assertEquals(1, ws.getAutoFilter().getFilterColumns().get(0).getColumnIndex());
+            assertEquals(1, ws.getAutoFilter().getFilterColumns().get(0).getFieldIndex());
         }
     }
 
@@ -564,7 +564,7 @@ class AutoFilterTest {
             }
             try (Workbook loaded = new Workbook(path)) {
                 assertEquals(1, loaded.getWorksheets().get(0).getAutoFilter().getFilterColumns().getCount());
-                assertEquals(2, loaded.getWorksheets().get(0).getAutoFilter().getFilterColumns().get(0).getColumnIndex());
+                assertEquals(2, loaded.getWorksheets().get(0).getAutoFilter().getFilterColumns().get(0).getFieldIndex());
             }
         }
     }
@@ -670,7 +670,7 @@ class AutoFilterTest {
     }
 
     // =========================================================================
-    // AF-70 to AF-76: Integration â€” raw XML inspection via ZipPackageHelper
+    // AF-70 to AF-76: Integration â€?raw XML inspection via ZipPackageHelper
     // =========================================================================
 
     /** AF-70: Saved XLSX contains &lt;autoFilter&gt; element with correct ref attribute. */
@@ -805,7 +805,7 @@ class AutoFilterTest {
                 Worksheet ws = wb.getWorksheets().get(0);
                 ws.getAutoFilter().setRange("A1:D1");
                 ws.getAutoFilter().getFilterColumns().add(0);
-                ws.getAutoFilter().getFilterColumns().get(0).setHiddenButton(true);
+                ws.getAutoFilter().getFilterColumns().get(0).setDropdownVisible(false);
                 wb.save(path);
             }
             String xml = ZipPackageHelper.readEntryText(path, "xl/worksheets/sheet1.xml");

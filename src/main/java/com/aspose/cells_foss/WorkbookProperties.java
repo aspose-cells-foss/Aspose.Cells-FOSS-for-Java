@@ -1,5 +1,6 @@
 package com.aspose.cells_foss;
 
+import com.aspose.cells_foss.core.WorkbookModel;
 import com.aspose.cells_foss.core.WorkbookPropertiesModel;
 
 /**
@@ -8,13 +9,20 @@ import com.aspose.cells_foss.core.WorkbookPropertiesModel;
 public final class WorkbookProperties {
 
     private final WorkbookPropertiesModel model;
+    private final WorkbookProtection protection;
+    private final WorkbookView view;
+    private final CalculationProperties calculation;
 
     /**
      * Initializes a new WorkbookProperties instance.
-     * @param model model
+     * @param model properties model
+     * @param workbookModel workbook model (needed by WorkbookView for activeTab)
      */
-    WorkbookProperties(WorkbookPropertiesModel model) {
+    WorkbookProperties(WorkbookPropertiesModel model, WorkbookModel workbookModel) {
         this.model = model;
+        this.protection = new WorkbookProtection(model.getProtection());
+        this.view = new WorkbookView(model.getView(), workbookModel);
+        this.calculation = new CalculationProperties(model.getCalculation());
     }
 
     /**
@@ -127,10 +135,12 @@ public final class WorkbookProperties {
      */
     public void setDefaultThemeVersion(Integer value) { model.setDefaultThemeVersion(value); }
 
-    /** Not yet implemented — returns null. */
-    public Object getProtection() { return null; }
-    /** Not yet implemented — returns null. */
-    public Object getView() { return null; }
-    /** Not yet implemented — returns null. */
-    public Object getCalculation() { return null; }
+    /** Returns the workbook-level protection settings (structure, windows, revision). */
+    public WorkbookProtection getProtection() { return protection; }
+
+    /** Returns the workbook view/window settings. */
+    public WorkbookView getView() { return view; }
+
+    /** Returns the workbook calculation properties. */
+    public CalculationProperties getCalculation() { return calculation; }
 }

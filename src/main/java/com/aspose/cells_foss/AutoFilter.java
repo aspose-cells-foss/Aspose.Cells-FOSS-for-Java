@@ -202,24 +202,23 @@ public final class AutoFilter {
          * Returns the column index.
          * @return the requested result
          */
-        public int getColumnIndex() {
+        public int getFieldIndex() {
             return model.getColumnIndex();
         }
 
-        /**
-         * Returns the hidden button.
-         * @return the requested result
-         */
-        public boolean getHiddenButton() {
-            return model.getHiddenButton();
+        /** Sets the field index. */
+        public void setFieldIndex(int value) {
+            model.setColumnIndex(value);
         }
 
-        /**
-         * Sets the hidden button.
-         * @param value value to apply
-         */
-        public void setHiddenButton(boolean value) {
-            model.setHiddenButton(value);
+        /** Returns true if the dropdown button is visible (not hidden). */
+        public boolean isDropdownVisible() {
+            return !model.getHiddenButton();
+        }
+
+        /** Sets whether the dropdown button is visible. */
+        public void setDropdownVisible(boolean value) {
+            model.setHiddenButton(!value);
         }
 
         /**

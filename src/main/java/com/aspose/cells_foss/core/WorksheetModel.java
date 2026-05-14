@@ -23,6 +23,11 @@ public final class WorksheetModel {
     private final WorksheetProtectionModel protection = new WorksheetProtectionModel();
     private final AutoFilterModel autoFilter = new AutoFilterModel();
     private ColorValue tabColor;
+    private final List<CommentModel> comments = new ArrayList<>();
+    private final List<PictureModel> pictures = new ArrayList<>();
+    private final List<ShapeModel> shapes = new ArrayList<>();
+    private final List<ChartModel> charts = new ArrayList<>();
+    private final List<ListObjectModel> listObjects = new ArrayList<>();
 
     /**
      * Initializes a new WorksheetModel instance.
@@ -130,4 +135,10 @@ public final class WorksheetModel {
      * @param tabColor tab color
      */
     public void setTabColor(ColorValue tabColor) { this.tabColor = tabColor; }
+
+    public List<CommentModel> getComments() { return comments; }
+    public List<PictureModel> getPictures() { return pictures; }
+    public List<ShapeModel> getShapes() { return shapes; }
+    public List<ChartModel> getCharts() { return charts; }
+    public List<ListObjectModel> getListObjects() { return listObjects; }
 }

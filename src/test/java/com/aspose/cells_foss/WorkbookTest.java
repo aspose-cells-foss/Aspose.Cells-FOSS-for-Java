@@ -476,7 +476,7 @@ class WorkbookTest {
     void WB_50_protectSetsIsProtected() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        assertTrue(wb.getWorksheets().get(0).getProtection().getIsProtected());
+        assertTrue(wb.getWorksheets().get(0).getProtection().isProtected());
     }
 
     /**
@@ -486,8 +486,8 @@ class WorkbookTest {
     void WB_51_protectObjects() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setObjects(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getObjects());
+        wb.getWorksheets().get(0).getProtection().setAllowEditingObject(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowEditingObject());
     }
 
     /**
@@ -497,8 +497,8 @@ class WorkbookTest {
     void WB_52_protectScenarios() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setScenarios(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getScenarios());
+        wb.getWorksheets().get(0).getProtection().setAllowEditingScenario(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowEditingScenario());
     }
 
     /**
@@ -508,8 +508,8 @@ class WorkbookTest {
     void WB_53_protectAutoFilter() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setAutoFilter(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getAutoFilter());
+        wb.getWorksheets().get(0).getProtection().setAllowFiltering(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowFiltering());
     }
 
     /**
@@ -519,8 +519,8 @@ class WorkbookTest {
     void WB_54_protectFormatCells() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setFormatCells(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getFormatCells());
+        wb.getWorksheets().get(0).getProtection().setAllowFormattingCell(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowFormattingCell());
     }
 
     /**
@@ -530,8 +530,8 @@ class WorkbookTest {
     void WB_55_protectInsertRows() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setInsertRows(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getInsertRows());
+        wb.getWorksheets().get(0).getProtection().setAllowInsertingRow(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowInsertingRow());
     }
 
     /**
@@ -541,8 +541,8 @@ class WorkbookTest {
     void WB_56_protectSelectLockedCells() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setSelectLockedCells(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getSelectLockedCells());
+        wb.getWorksheets().get(0).getProtection().setAllowSelectingLockedCell(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowSelectingLockedCell());
     }
 
     /**
@@ -552,8 +552,8 @@ class WorkbookTest {
     void WB_57_protectSelectUnlockedCells() {
         Workbook wb = new Workbook();
         wb.getWorksheets().get(0).protect();
-        wb.getWorksheets().get(0).getProtection().setSelectUnlockedCells(true);
-        assertTrue(wb.getWorksheets().get(0).getProtection().getSelectUnlockedCells());
+        wb.getWorksheets().get(0).getProtection().setAllowSelectingUnlockedCell(false);
+        assertFalse(wb.getWorksheets().get(0).getProtection().getAllowSelectingUnlockedCell());
     }
 
     // =========================================================================
@@ -578,8 +578,8 @@ class WorkbookTest {
     void WB_61_rowHiddenRoundtrips() {
         Workbook wb = new Workbook();
         Row row = wb.getWorksheets().get(0).getCells().getRows().get(0);
-        row.setIsHidden(true);
-        assertTrue(row.getIsHidden());
+        row.setHidden(true);
+        assertTrue(row.isHidden());
     }
 
     /**
@@ -600,8 +600,8 @@ class WorkbookTest {
     void WB_63_columnHiddenRoundtrips() {
         Workbook wb = new Workbook();
         Column col = wb.getWorksheets().get(0).getCells().getColumns().get(0);
-        col.setIsHidden(true);
-        assertTrue(col.getIsHidden());
+        col.setHidden(true);
+        assertTrue(col.isHidden());
     }
 
     /**
@@ -1042,13 +1042,13 @@ class WorkbookTest {
                 wb.getWorksheets().get(0).getCells().getRows().get(0).setHeight(30.0);
 
                 // WB-B8: Row hidden — use row 1 (row 0 has a height, use different row to avoid confusion)
-                wb.getWorksheets().get(0).getCells().getRows().get(5).setIsHidden(true);
+                wb.getWorksheets().get(0).getCells().getRows().get(5).setHidden(true);
 
                 // WB-B9: Column width on Alpha, col 0
                 wb.getWorksheets().get(0).getCells().getColumns().get(0).setWidth(20.0);
 
                 // WB-BA: Column hidden on Alpha, col 1
-                wb.getWorksheets().get(0).getCells().getColumns().get(1).setIsHidden(true);
+                wb.getWorksheets().get(0).getCells().getColumns().get(1).setHidden(true);
 
                 // WB-BB: AutoFilter range
                 wb.getWorksheets().get(0).getAutoFilter().setRange("A1:D1");
@@ -1105,7 +1105,7 @@ class WorkbookTest {
             assertEquals(30.0, rowH, 0.5);
 
             // WB-B8
-            assertTrue(loaded.getWorksheets().get(0).getCells().getRows().get(5).getIsHidden());
+            assertTrue(loaded.getWorksheets().get(0).getCells().getRows().get(5).isHidden());
 
             // WB-B9
             Double colW = loaded.getWorksheets().get(0).getCells().getColumns().get(0).getWidth();
@@ -1113,7 +1113,7 @@ class WorkbookTest {
             assertEquals(20.0, colW, 0.5);
 
             // WB-BA
-            assertTrue(loaded.getWorksheets().get(0).getCells().getColumns().get(1).getIsHidden());
+            assertTrue(loaded.getWorksheets().get(0).getCells().getColumns().get(1).isHidden());
 
             // WB-BB
             assertEquals("A1:D1", loaded.getWorksheets().get(0).getAutoFilter().getRange());

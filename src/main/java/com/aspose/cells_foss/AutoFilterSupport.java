@@ -38,12 +38,18 @@ public final class AutoFilterSupport {
      * @return the normalized range reference
      */
     public static String normalizeRequiredRange(String value, String parameterName) {
-        // Handle the relevant branch before the state changes.
         if (value == null || value.isBlank()) {
             throw new CellsException(parameterName + " must be a valid cell or range reference.");
         }
-
-        return value.trim();
+        String trimmed = value.trim();
+        // Validate: try to parse at least the first cell in the range
+        String firstPart = trimmed.split(":")[0].replaceAll("\\$", "");
+        try {
+            com.aspose.cells_foss.core.CellAddress.parse(firstPart);
+        } catch (Exception e) {
+            throw new CellsException(parameterName + " '" + value + "' is not a valid cell or range reference.");
+        }
+        return trimmed;
     }
 
     /**

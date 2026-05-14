@@ -46,17 +46,25 @@ final class XlsxWorkbookPageSetup {
           .append("\" header=\"").append(XlsxWorkbookSerializerCommon.fmt(pm.getHeader()))
           .append("\" footer=\"").append(XlsxWorkbookSerializerCommon.fmt(pm.getFooter())).append("\"/>");
 
-        // pageSetup
+        // pageSetup — omit entirely when all settings are default
         int paperSizeCode = PaperSizeType.values()[ps.getPaperSize()].getValue();
-        String orientStr = ps.getOrientation() == PageOrientation.LANDSCAPE ? "landscape"
-                : ps.getOrientation() == PageOrientation.PORTRAIT ? "portrait" : "default";
-        sb.append("<pageSetup paperSize=\"").append(paperSizeCode).append("\" orientation=\"").append(orientStr).append("\"");
-        if (ps.getScale() != null) sb.append(" scale=\"").append(ps.getScale()).append("\"");
-        if (ps.getFitToWidth() != null) sb.append(" fitToWidth=\"").append(ps.getFitToWidth()).append("\"");
-        if (ps.getFitToHeight() != null) sb.append(" fitToHeight=\"").append(ps.getFitToHeight()).append("\"");
-        if (ps.getFirstPageNumber() != null)
-            sb.append(" firstPageNumber=\"").append(ps.getFirstPageNumber()).append("\" useFirstPageNumber=\"1\"");
-        sb.append("/>");
+        boolean isLandscape = ps.getOrientation() == PageOrientation.LANDSCAPE;
+        boolean isPortrait  = ps.getOrientation() == PageOrientation.PORTRAIT;
+        boolean hasNonDefaultPageSetup = paperSizeCode != 0 || isLandscape || isPortrait
+                || ps.getScale() != null || ps.getFitToWidth() != null
+                || ps.getFitToHeight() != null || ps.getFirstPageNumber() != null;
+        if (hasNonDefaultPageSetup) {
+            String orientStr = isLandscape ? "landscape" : isPortrait ? "portrait" : "default";
+            sb.append("<pageSetup");
+            if (paperSizeCode != 0) sb.append(" paperSize=\"").append(paperSizeCode).append("\"");
+            sb.append(" orientation=\"").append(orientStr).append("\"");
+            if (ps.getScale() != null) sb.append(" scale=\"").append(ps.getScale()).append("\"");
+            if (ps.getFitToWidth() != null) sb.append(" fitToWidth=\"").append(ps.getFitToWidth()).append("\"");
+            if (ps.getFitToHeight() != null) sb.append(" fitToHeight=\"").append(ps.getFitToHeight()).append("\"");
+            if (ps.getFirstPageNumber() != null)
+                sb.append(" firstPageNumber=\"").append(ps.getFirstPageNumber()).append("\" useFirstPageNumber=\"1\"");
+            sb.append("/>");
+        }
 
         // headerFooter
         HeaderFooterModel hf = ps.getHeaderFooter();

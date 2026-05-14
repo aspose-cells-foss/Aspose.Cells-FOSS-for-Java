@@ -46,7 +46,7 @@ public final class Column {
      * Returns the hidden.
      * @return the requested result
      */
-    public boolean getIsHidden() {
+    public boolean isHidden() {
         ColumnRangeModel range = findRange();
         return range != null && range.getHidden();
     }
@@ -55,7 +55,7 @@ public final class Column {
      * Sets the hidden.
      * @param value value to apply
      */
-    public void setIsHidden(boolean value) {
+    public void setHidden(boolean value) {
         ColumnRangeModel range = getOrCreateRange();
         range.setHidden(value);
     }
@@ -81,7 +81,7 @@ public final class Column {
     }
 
     /** Sets whether this column's outline group is collapsed. */
-    public void setIsCollapsed(boolean value) {
+    public void setCollapsed(boolean value) {
         ColumnRangeModel range = getOrCreateRange();
         range.setCollapsed(value);
     }

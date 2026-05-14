@@ -5,16 +5,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit 5 tests for row/column outline (grouping) â€” OG-* test cases.
+ * JUnit 5 tests for row/column outline (grouping) â€?OG-* test cases.
  *
  * <p>Outline levels map to the OOXML {@code outlineLevel} attribute on {@code <row>} and
- * {@code <col>} elements. Level 0 means ungrouped; levels 1â€“7 represent nesting depth.
+ * {@code <col>} elements. Level 0 means ungrouped; levels 1â€? represent nesting depth.
  * The {@code collapsed} flag indicates whether the outline group is currently collapsed.
  */
 class OutlineGroupTest {
 
     // =========================================================================
-    // OG-01 â€¦ OG-06  Row grouping â€” in-memory API
+    // OG-01 â€?OG-06  Row grouping â€?in-memory API
     // =========================================================================
 
     /**
@@ -61,7 +61,7 @@ class OutlineGroupTest {
         // Wrap lower-level failures in the library-specific exception flow.
         try (Workbook wb = new Workbook()) {
             Row row = wb.getWorksheets().get(0).getCells().getRows().get(1);
-            row.setIsCollapsed(true);
+            row.setCollapsed(true);
             assertTrue(row.isCollapsed());
         }
     }
@@ -95,7 +95,7 @@ class OutlineGroupTest {
     }
 
     // =========================================================================
-    // OG-10 â€¦ OG-15  Column grouping â€” in-memory API
+    // OG-10 â€?OG-15  Column grouping â€?in-memory API
     // =========================================================================
 
     /**
@@ -142,7 +142,7 @@ class OutlineGroupTest {
         // Wrap lower-level failures in the library-specific exception flow.
         try (Workbook wb = new Workbook()) {
             Column col = wb.getWorksheets().get(0).getCells().getColumns().get(1);
-            col.setIsCollapsed(true);
+            col.setCollapsed(true);
             assertTrue(col.isCollapsed());
         }
     }
@@ -176,7 +176,7 @@ class OutlineGroupTest {
     }
 
     // =========================================================================
-    // OG-20 â€¦ OG-27  XLSX round-trips
+    // OG-20 â€?OG-27  XLSX round-trips
     // =========================================================================
 
     /**
@@ -215,7 +215,7 @@ class OutlineGroupTest {
             try (Workbook wb = new Workbook()) {
                 Row row = wb.getWorksheets().get(0).getCells().getRows().get(2);
                 row.setGroupLevel(1);
-                row.setIsCollapsed(true);
+                row.setCollapsed(true);
                 wb.save(path);
             }
             try (Workbook loaded = new Workbook(path)) {
@@ -262,7 +262,7 @@ class OutlineGroupTest {
             try (Workbook wb = new Workbook()) {
                 Column col = wb.getWorksheets().get(0).getCells().getColumns().get(2);
                 col.setGroupLevel(1);
-                col.setIsCollapsed(true);
+                col.setCollapsed(true);
                 wb.save(path);
             }
             try (Workbook loaded = new Workbook(path)) {
@@ -333,7 +333,7 @@ class OutlineGroupTest {
             String path = dir.getPath("nested.xlsx");
             try (Workbook wb = new Workbook()) {
                 Worksheet ws = wb.getWorksheets().get(0);
-                // outer group (level 1) rows 1â€“5, inner group (level 2) rows 2â€“3
+                // outer group (level 1) rows 1â€?, inner group (level 2) rows 2â€?
                 for (int r = 1; r <= 5; r++) ws.getCells().getRows().get(r).setGroupLevel(1);
                 for (int r = 2; r <= 3; r++) ws.getCells().getRows().get(r).setGroupLevel(2);
                 wb.save(path);

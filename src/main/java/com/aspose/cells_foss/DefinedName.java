@@ -75,7 +75,7 @@ public final class DefinedName {
      * Returns the hidden.
      * @return the requested result
      */
-    public boolean getHidden() {
+    public boolean isHidden() {
         return model.getHidden();
     }
 

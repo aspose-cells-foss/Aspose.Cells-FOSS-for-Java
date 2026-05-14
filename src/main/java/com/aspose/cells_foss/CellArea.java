@@ -76,6 +76,20 @@ public final class CellArea {
      * @param endCellName    the end cell name
      * @return a new CellArea
      */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof CellArea)) return false;
+        CellArea other = (CellArea) obj;
+        return firstRow == other.firstRow && firstColumn == other.firstColumn
+            && totalRows == other.totalRows && totalColumns == other.totalColumns;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * (31 * (31 * firstRow + firstColumn) + totalRows) + totalColumns;
+    }
+
     public static CellArea createCellArea(String startCellName, String endCellName) {
         CellAddress start = CellAddress.parse(startCellName);
         CellAddress end = CellAddress.parse(endCellName);

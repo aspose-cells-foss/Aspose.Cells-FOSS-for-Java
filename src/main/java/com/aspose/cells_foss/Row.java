@@ -45,7 +45,7 @@ public final class Row {
      * Returns the hidden.
      * @return the requested result
      */
-    public boolean getIsHidden() {
+    public boolean isHidden() {
         RowModel model = worksheet.getModel().getRows().get(index);
         return model != null && model.getHidden();
     }
@@ -54,7 +54,7 @@ public final class Row {
      * Sets the hidden.
      * @param value value to apply
      */
-    public void setIsHidden(boolean value) {
+    public void setHidden(boolean value) {
         // Lazily create the backing record the first time this path is used.
         RowModel model = worksheet.getModel().getRows().computeIfAbsent(index, k -> new RowModel());
         model.setHidden(value);
@@ -81,7 +81,7 @@ public final class Row {
     }
 
     /** Sets whether this row's outline group is collapsed. */
-    public void setIsCollapsed(boolean value) {
+    public void setCollapsed(boolean value) {
         // Lazily create the backing record the first time this path is used.
         RowModel model = worksheet.getModel().getRows().computeIfAbsent(index, k -> new RowModel());
         model.setCollapsed(value);

@@ -26,16 +26,22 @@ The library stores and round-trips formulas, but it is not a full spreadsheet ca
 - Hyperlinks
 - Data validation
 - Conditional formatting
-- Auto filters
+- Auto filters with color filters, dynamic filters, top-10 filters, custom filters, and sort conditions
 - Page setup
 - Worksheet protection
+- **Cell comments** — add, edit, and remove comments (notes) with author, text, visibility, and size
+- **Embedded pictures** — add images from bytes, streams, or file paths with anchor positioning; JPEG, PNG, GIF, and BMP detection
+- **Embedded charts** — read chart properties and preserve chart XML verbatim across load/save
+- **Excel tables (ListObjects)** — create, resize, style, and remove structured tables with column definitions and totals rows
 - Document properties and workbook property persistence for supported `workbookPr` attributes
+- `NumberFormat` utility for looking up and resolving built-in Excel format codes
 - Load diagnostics, repair reporting, and preservation of unsupported package parts during load/save flows
 
 ## Known Limits
 
 - Saving is currently limited to `.xlsx`
-- Workbook-level wrapper APIs for protection, view, and calculation settings are not fully exposed yet
+- Chart creation (programmatic XML generation) is not yet implemented; loaded charts are round-tripped verbatim
+- Image drawing XML (xl/drawings) is preserved on load but not yet written for newly added pictures
 - Some APIs exist mainly to preserve OOXML metadata and package fidelity rather than to provide full Excel feature parity
 
 ## Build And Test
@@ -180,7 +186,10 @@ src/main/java/com/aspose/cells_foss/validation/
   Workbook validation messages and validation helpers
 
 src/test/java/com/aspose/cells_foss/
-  Scenario-driven tests for workbook behavior and XLSX round-tripping
+  Scenario-driven integration tests for workbook behavior and XLSX round-tripping
+
+src/test/java/com/aspose/cells_foss/unit/
+  Fast, focused unit tests for individual API classes without XLSX I/O
 ```
 
 ## Testing Coverage
@@ -197,7 +206,9 @@ Representative test areas include:
 - auto filters
 - document and workbook properties
 - outline grouping
+- cell comments, embedded pictures, embedded charts, and Excel tables
 - compatibility checks against generated XLSX output
+- focused unit tests in `src/test/java/com/aspose/cells_foss/unit/`
 
 ## Notes For Contributors
 

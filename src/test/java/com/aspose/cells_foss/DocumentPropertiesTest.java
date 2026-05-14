@@ -325,7 +325,7 @@ class DocumentPropertiesTest {
     }
 
     /**
-     * Verifies that no doc props part when properties are empty.
+     * Verifies that docProps parts are always present (OPC compliance) even when empty.
      */
     @Test
     void DP_21_noDocPropsPartWhenPropertiesAreEmpty() throws Exception {
@@ -334,9 +334,14 @@ class DocumentPropertiesTest {
             try (Workbook wb = new Workbook()) {
                 wb.save(path);
             }
-            // docProps/core.xml should be absent — no empty part written
-            assertThrows(Exception.class, () -> ZipPackageHelper.readEntryText(path, "docProps/core.xml"),
-                "docProps/core.xml should not exist when no document properties are set");
+            // docProps/core.xml must always exist for OPC compliance (Excel requires it)
+            String core = ZipPackageHelper.readEntryText(path, "docProps/core.xml");
+            assertTrue(core.contains("coreProperties"), "docProps/core.xml should always be present");
+            // content should be empty (no title, no author, etc.)
+            try (Workbook loaded = new Workbook(path)) {
+                assertTrue(loaded.getDocumentProperties().getTitle().isEmpty(),
+                    "Title should be empty when not set");
+            }
         }
     }
 

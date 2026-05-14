@@ -11,6 +11,7 @@ public final class ColumnRangeModel {
     private Integer styleIndex;
     private int outlineLevel;   // 0 = ungrouped, 1–7 = nesting depth
     private boolean collapsed;  // true = group is collapsed
+    private boolean bestFit;
 
     /**
      * Returns the min column index.
@@ -88,4 +89,7 @@ public final class ColumnRangeModel {
      * @param collapsed collapsed
      */
     public void setCollapsed(boolean collapsed) { this.collapsed = collapsed; }
+
+    public boolean getBestFit() { return bestFit; }
+    public void setBestFit(boolean bestFit) { this.bestFit = bestFit; }
 }

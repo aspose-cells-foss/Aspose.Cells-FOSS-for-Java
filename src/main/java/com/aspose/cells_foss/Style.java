@@ -120,12 +120,12 @@ public class Style {
      * Indicates whether wrap text.
      * @return true when the condition is satisfied
      */
-    public boolean isWrapText() { return wrapText; }
+    public boolean isTextWrapped() { return wrapText; }
     /**
-     * Sets the wrap text.
+     * Sets the text wrapped.
      * @param value value to apply
      */
-    public void setWrapText(boolean value) { this.wrapText = value; }
+    public void setTextWrapped(boolean value) { this.wrapText = value; }
 
     /**
      * Returns the indent level.
@@ -136,24 +136,30 @@ public class Style {
      * Sets the indent level.
      * @param value value to apply
      */
-    public void setIndentLevel(int value) { this.indentLevel = value; }
+    public void setIndentLevel(int value) {
+        if (value < 0) throw new CellsException("IndentLevel must be non-negative.");
+        this.indentLevel = value;
+    }
 
     /**
      * Returns the text rotation.
      * @return the requested result
      */
-    public int getTextRotation() { return textRotation; }
+    public int getRotationAngle() { return textRotation; }
     /**
-     * Sets the text rotation.
+     * Sets the rotation angle.
      * @param value value to apply
      */
-    public void setTextRotation(int value) { this.textRotation = value; }
+    public void setRotationAngle(int value) {
+        if (value < 0 || value > 180) throw new CellsException("RotationAngle must be between 0 and 180.");
+        this.textRotation = value;
+    }
 
     /**
      * Indicates whether shrink to fit.
      * @return true when the condition is satisfied
      */
-    public boolean isShrinkToFit() { return shrinkToFit; }
+    public boolean getShrinkToFit() { return shrinkToFit; }
     /**
      * Sets the shrink to fit.
      * @param value value to apply
@@ -169,7 +175,10 @@ public class Style {
      * Sets the reading order.
      * @param value value to apply
      */
-    public void setReadingOrder(int value) { this.readingOrder = value; }
+    public void setReadingOrder(int value) {
+        if (value < 0 || value > 2) throw new CellsException("ReadingOrder must be 0, 1, or 2.");
+        this.readingOrder = value;
+    }
 
     /**
      * Returns the relative indent.
@@ -239,6 +248,35 @@ public class Style {
      */
     public void setCustom(String value) { this.custom = value; }
 
+    /**
+     * Combined number format getter: returns the custom format string if set,
+     * otherwise returns the built-in format string for the current {@code number} index.
+     */
+    public String getNumberFormat() {
+        return NumberFormat.resolveFormatCode(number, custom);
+    }
+
+    /**
+     * Combined number format setter: if {@code formatCode} matches a built-in format,
+     * sets {@link #number} to its ID and clears {@link #custom};
+     * otherwise sets {@link #number} to 0 and stores the code in {@link #custom}.
+     */
+    public void setNumberFormat(String formatCode) {
+        if (formatCode == null || formatCode.isBlank()) {
+            number = 0;
+            custom = null;
+            return;
+        }
+        Integer id = NumberFormat.getBuiltInFormatId(formatCode.trim());
+        if (id != null) {
+            number = id;
+            custom = null;
+        } else {
+            number = 0;
+            custom = formatCode.trim();
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Cell protection
     // -------------------------------------------------------------------------
@@ -252,12 +290,12 @@ public class Style {
     public void setLocked(boolean value) { this.isLocked = value; }
 
     /** Whether the cell formula is hidden when the sheet is protected. */
-    public boolean isHidden() { return isHidden; }
+    public boolean isFormulaHidden() { return isHidden; }
     /**
-     * Sets the hidden.
+     * Sets whether the cell formula is hidden.
      * @param value value to apply
      */
-    public void setHidden(boolean value) { this.isHidden = value; }
+    public void setFormulaHidden(boolean value) { this.isHidden = value; }
 
     // -------------------------------------------------------------------------
     // Clone
@@ -317,10 +355,10 @@ public class Style {
         s.backgroundColor = sv.getBackgroundColor() != null
                 ? Color.fromCore(sv.getBackgroundColor()) : Color.getEmpty();
 
-        // Number format
+        // Number format — if a custom code is set, the public number stays 0
         NumberFormatValue nf = sv.getNumberFormat();
-        s.number = nf.getNumber();
         s.custom = nf.getCustom();
+        s.number = (s.custom != null && !s.custom.isEmpty()) ? 0 : nf.getNumber();
 
         // Protection
         ProtectionValue pv = sv.getProtection();

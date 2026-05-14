@@ -175,7 +175,11 @@ final class XlsxWorkbookConditionalFormatting {
      */
     private static void buildDataBar(FormatConditionModel cond, StringBuilder sb) {
         ColorValue defaultBar = new ColorValue((byte)255,(byte)99,(byte)142,(byte)198);
-        sb.append("<dataBar>");
+        sb.append("<dataBar");
+        if (cond.getShowBorder()) sb.append(" showBorder=\"1\"");
+        if (cond.getDirection() != null && !cond.getDirection().isEmpty())
+            sb.append(" direction=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(cond.getDirection())).append("\"");
+        sb.append(">");
         sb.append("<cfvo type=\"min\"/><cfvo type=\"max\"/>");
         appendColor(cond.getBarColor(), defaultBar, sb);
         sb.append("</dataBar>");
@@ -525,8 +529,10 @@ final class XlsxWorkbookConditionalFormatting {
      */
     private static void loadDataBar(FormatConditionModel cond, Element el) {
         NodeList colors = el.getElementsByTagNameNS("*", "color");
-        // Handle the relevant branch before the state changes.
         if (colors.getLength() > 0) cond.setBarColor(readRgbColor((Element) colors.item(0)));
+        cond.setShowBorder("1".equals(el.getAttribute("showBorder")));
+        String dir = el.getAttribute("direction");
+        if (!dir.isEmpty()) cond.setDirection(dir);
     }
 
     /**

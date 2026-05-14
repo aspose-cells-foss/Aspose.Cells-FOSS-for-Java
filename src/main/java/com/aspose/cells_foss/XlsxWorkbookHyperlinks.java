@@ -43,7 +43,12 @@ final class XlsxWorkbookHyperlinks {
             if (hl.getAddress() != null && !hl.getAddress().isEmpty()) {
                 String rId = "rId" + rIdCounter++;
                 sb.append(" r:id=\"").append(rId).append("\"");
-                externalRels.add(new String[]{rId, hl.getAddress()});
+                externalRels.add(new String[]{
+                    rId,
+                    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                    hl.getAddress(),
+                    "External"
+                });
             }
             if (hl.getSubAddress() != null && !hl.getSubAddress().isEmpty())
                 sb.append(" location=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(hl.getSubAddress())).append("\"");
@@ -57,9 +62,9 @@ final class XlsxWorkbookHyperlinks {
     }
 
     /**
-     * Builds the sheet rels xml.
-     * @param rels rels
-     * @return the requested result
+     * Builds the sheet rels XML.
+     * Each entry in {@code rels} is {@code [rId, type, target, targetMode?]}.
+     * {@code targetMode} may be null or empty to omit the attribute (internal rels).
      */
     static byte[] buildSheetRelsXml(List<String[]> rels) {
         StringBuilder sb = new StringBuilder();
@@ -68,9 +73,11 @@ final class XlsxWorkbookHyperlinks {
         // Walk the current collection so every entry is processed consistently.
         for (String[] rel : rels) {
             sb.append("<Relationship Id=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(rel[0]))
-              .append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\"")
-              .append(" Target=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(rel[1]))
-              .append("\" TargetMode=\"External\"/>");
+              .append("\" Type=\"").append(rel[1]).append("\"")
+              .append(" Target=\"").append(XlsxWorkbookSerializerCommon.xmlAttr(rel[2])).append("\"");
+            if (rel.length > 3 && rel[3] != null && !rel[3].isEmpty())
+                sb.append(" TargetMode=\"").append(rel[3]).append("\"");
+            sb.append("/>");
         }
         sb.append("</Relationships>");
         return sb.toString().getBytes(StandardCharsets.UTF_8);

@@ -204,18 +204,18 @@ class CompatibilityTest {
         Worksheet sheet = workbook.getWorksheets().get(0);
 
         sheet.protect();
-        sheet.getProtection().setObjects(true);
-        sheet.getProtection().setScenarios(true);
-        sheet.getProtection().setAutoFilter(true);
-        sheet.getProtection().setSelectLockedCells(true);
-        sheet.getProtection().setSelectUnlockedCells(true);
+        sheet.getProtection().setAllowEditingObject(false);
+        sheet.getProtection().setAllowEditingScenario(false);
+        sheet.getProtection().setAllowFiltering(false);
+        sheet.getProtection().setAllowSelectingLockedCell(false);
+        sheet.getProtection().setAllowSelectingUnlockedCell(false);
 
-        assertTrue(sheet.getProtection().getIsProtected());
-        assertTrue(sheet.getProtection().getObjects());
-        assertTrue(sheet.getProtection().getScenarios());
-        assertTrue(sheet.getProtection().getAutoFilter());
-        assertTrue(sheet.getProtection().getSelectLockedCells());
-        assertTrue(sheet.getProtection().getSelectUnlockedCells());
+        assertTrue(sheet.getProtection().isProtected());
+        assertFalse(sheet.getProtection().getAllowEditingObject());
+        assertFalse(sheet.getProtection().getAllowEditingScenario());
+        assertFalse(sheet.getProtection().getAllowFiltering());
+        assertFalse(sheet.getProtection().getAllowSelectingLockedCell());
+        assertFalse(sheet.getProtection().getAllowSelectingUnlockedCell());
     }
 
     /**
