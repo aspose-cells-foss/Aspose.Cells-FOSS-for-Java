@@ -29,10 +29,16 @@ The library stores and round-trips formulas, but it is not a full spreadsheet ca
 - Auto filters with color filters, dynamic filters, top-10 filters, custom filters, and sort conditions
 - Page setup
 - Worksheet protection
+- Freeze panes — freeze rows and/or columns by coordinate or cell name; inspect and clear frozen state
 - **Cell comments** — add, edit, and remove comments (notes) with author, text, visibility, and size
-- **Embedded pictures** — add images from bytes, streams, or file paths with anchor positioning; JPEG, PNG, GIF, and BMP detection
-- **Embedded charts** — read chart properties and preserve chart XML verbatim across load/save
+- **Embedded pictures** — add images from bytes, streams, or file paths with two-cell anchor positioning; JPEG, PNG, GIF, and BMP detection
+- **Embedded charts** — read chart name, type, anchor, and extent; 21 standard chart types can be created programmatically via `ChartCollection.add()`; loaded charts are preserved verbatim across load/save
+- **Drawing shapes** — add, retrieve, and remove drawing objects with 35 preset geometries (`AutoShapeType`); complex shapes loaded from XLSX are preserved verbatim
 - **Excel tables (ListObjects)** — create, resize, style, and remove structured tables with column definitions and totals rows
+- **Workbook protection** — lock structure, windows, and revisions with separate passwords via `WorkbookProtection`
+- **Workbook view** — read and write window position, size, active tab, scroll bar and sheet tab visibility via `WorkbookView`
+- **Calculation properties** — configure calculation mode, reference mode, iterative calculation, and precision via `CalculationProperties`
+- **Error cell values** — `#N/A`, `#VALUE!`, `#REF!` and other error results are loaded, stored, and saved with the correct `t="e"` cell type
 - Document properties and workbook property persistence for supported `workbookPr` attributes
 - `NumberFormat` utility for looking up and resolving built-in Excel format codes
 - Load diagnostics, repair reporting, and preservation of unsupported package parts during load/save flows
@@ -40,8 +46,7 @@ The library stores and round-trips formulas, but it is not a full spreadsheet ca
 ## Known Limits
 
 - Saving is currently limited to `.xlsx`
-- Chart creation (programmatic XML generation) is not yet implemented; loaded charts are round-tripped verbatim
-- Image drawing XML (xl/drawings) is preserved on load but not yet written for newly added pictures
+- ChartEx types (Waterfall, Treemap, Sunburst, Histogram, Box and Whisker, Funnel, Map) cannot be created programmatically; they are preserved verbatim across load/save
 - Some APIs exist mainly to preserve OOXML metadata and package fidelity rather than to provide full Excel feature parity
 
 ## Build And Test
@@ -210,7 +215,9 @@ Representative test areas include:
 - auto filters
 - document and workbook properties
 - outline grouping
-- cell comments, embedded pictures, embedded charts, and Excel tables
+- cell comments, embedded pictures, embedded charts, drawing shapes, and Excel tables
+- freeze panes, workbook protection, workbook view, and calculation properties
+- error cell value round-tripping
 - compatibility checks against generated XLSX output
 - focused unit tests in `src/test/java/com/aspose/cells_foss/unit/`
 
