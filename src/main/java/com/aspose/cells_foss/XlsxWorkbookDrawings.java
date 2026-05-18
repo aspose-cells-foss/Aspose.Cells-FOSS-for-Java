@@ -95,8 +95,10 @@ final class XlsxWorkbookDrawings {
             mediaFiles.put(mediaPath, pic.getData());
             drawingRels.add(new String[]{imgRId, IMAGE_REL_TYPE, relTarget});
 
-            sb.append(twoCellAnchor(pic.getUpperLeftRow(), pic.getUpperLeftColumn(),
-                pic.getLowerRightRow(), pic.getLowerRightColumn()));
+            sb.append(twoCellAnchor(pic.getUpperLeftRow(), pic.getUpperLeftRowOffset(),
+                pic.getUpperLeftColumn(), pic.getUpperLeftColumnOffset(),
+                pic.getLowerRightRow(), pic.getLowerRightRowOffset(),
+                pic.getLowerRightColumn(), pic.getLowerRightColumnOffset()));
             sb.append(picXml(shapeId++, pic.getName(), imgRId));
             sb.append("</xdr:twoCellAnchor>");
         }
@@ -123,8 +125,10 @@ final class XlsxWorkbookDrawings {
                 if (emittedExtraRIds.add(rel[0]))
                     drawingRels.add(rel);
             }
-            sb.append(twoCellAnchor(shape.getUpperLeftRow(), shape.getUpperLeftColumn(),
-                shape.getLowerRightRow(), shape.getLowerRightColumn()));
+            sb.append(twoCellAnchor(shape.getUpperLeftRow(), shape.getUpperLeftRowOffset(),
+                shape.getUpperLeftColumn(), shape.getUpperLeftColumnOffset(),
+                shape.getLowerRightRow(), shape.getLowerRightRowOffset(),
+                shape.getLowerRightColumn(), shape.getLowerRightColumnOffset()));
             if (shape.getRawElementXml() != null && !shape.getRawElementXml().isBlank()) {
                 sb.append(shape.getRawElementXml());
             } else {
@@ -181,6 +185,12 @@ final class XlsxWorkbookDrawings {
                         String ext = PictureCollection.extensionFromData(content);
                         newTarget = "../media/image" + chartImageIdx + "." + ext;
                         mediaFiles.put("xl/media/image" + chartImageIdx + "." + ext, content);
+                    } else if (relType.contains("chartUserShapes")) {
+                        // chartUserShapes drawings live in xl/drawings/ with a unique name to
+                        // avoid collisions with worksheet drawing files (drawing1.xml, drawing2.xml…)
+                        newTarget = "../drawings/userShapes" + chartIdx + ".xml";
+                        if (content != null)
+                            chartXmls.put("xl/drawings/userShapes" + chartIdx + ".xml", content);
                     } else {
                         newTarget = rel[2]; // preserve original target for unknown rel types
                     }
@@ -194,8 +204,10 @@ final class XlsxWorkbookDrawings {
             }
 
             // Write drawing element
-            sb.append(twoCellAnchor(chart.getUpperLeftRow(), chart.getUpperLeftColumn(),
-                chart.getLowerRightRow(), chart.getLowerRightColumn()));
+            sb.append(twoCellAnchor(chart.getUpperLeftRow(), chart.getUpperLeftRowOffset(),
+                chart.getUpperLeftColumn(), chart.getUpperLeftColumnOffset(),
+                chart.getLowerRightRow(), chart.getLowerRightRowOffset(),
+                chart.getLowerRightColumn(), chart.getLowerRightColumnOffset()));
             if (isChartEx) {
                 // Preserve AlternateContent wrapper with rId replacement
                 String frameXml = chart.getRawGraphicFrameXml();
@@ -206,7 +218,8 @@ final class XlsxWorkbookDrawings {
                 }
                 sb.append(frameXml).append("<xdr:clientData/>");
             } else {
-                sb.append(graphicFrameXml(shapeId++, chart.getName(), chartRId));
+                sb.append(graphicFrameXml(shapeId++, chart.getName(), chartRId,
+                    chart.getRawCNvPrExtLst()));
             }
             sb.append("</xdr:twoCellAnchor>");
         }
@@ -351,11 +364,15 @@ final class XlsxWorkbookDrawings {
             }
 
             // Anchor coordinates
-            int[] coords = extractAnchorFromElement(anchor);
-            model.setUpperLeftRow(coords[0]);
-            model.setUpperLeftColumn(coords[1]);
-            model.setLowerRightRow(coords[2]);
-            model.setLowerRightColumn(coords[3]);
+            long[] coords = extractAnchorFromElement(anchor);
+            model.setUpperLeftRow((int) coords[0]);
+            model.setUpperLeftColumn((int) coords[1]);
+            model.setLowerRightRow((int) coords[2]);
+            model.setLowerRightColumn((int) coords[3]);
+            model.setUpperLeftRowOffset(coords[4]);
+            model.setUpperLeftColumnOffset(coords[5]);
+            model.setLowerRightRowOffset(coords[6]);
+            model.setLowerRightColumnOffset(coords[7]);
 
             ws.getShapes().add(model);
         }
@@ -384,13 +401,29 @@ final class XlsxWorkbookDrawings {
         }
     }
 
-    private static int[] extractAnchorFromElement(Element anchor) {
-        int ulr = 0, ulc = 0, lrr = 0, lrc = 0;
+    /** Returns [ulRow, ulCol, lrRow, lrCol, ulRowOff, ulColOff, lrRowOff, lrColOff]. */
+    private static long[] extractAnchorFromElement(Element anchor) {
+        long ulr = 0, ulc = 0, lrr = 0, lrc = 0, ulrOff = 0, ulcOff = 0, lrrOff = 0, lrcOff = 0;
         NodeList froms = anchor.getElementsByTagNameNS("*", "from");
         NodeList tos   = anchor.getElementsByTagNameNS("*", "to");
-        if (froms.getLength() > 0) { Element f = (Element) froms.item(0); ulr = parseInt(f, "row"); ulc = parseInt(f, "col"); }
-        if (tos.getLength() > 0)   { Element t = (Element) tos.item(0);   lrr = parseInt(t, "row"); lrc = parseInt(t, "col"); }
-        return new int[]{ulr, ulc, lrr, lrc};
+        if (froms.getLength() > 0) {
+            Element f = (Element) froms.item(0);
+            ulr   = parseLong(f, "row");    ulc   = parseLong(f, "col");
+            ulrOff = parseLong(f, "rowOff"); ulcOff = parseLong(f, "colOff");
+        }
+        if (tos.getLength() > 0) {
+            Element t = (Element) tos.item(0);
+            lrr   = parseLong(t, "row");    lrc   = parseLong(t, "col");
+            lrrOff = parseLong(t, "rowOff"); lrcOff = parseLong(t, "colOff");
+        }
+        return new long[]{ulr, ulc, lrr, lrc, ulrOff, ulcOff, lrrOff, lrcOff};
+    }
+
+    private static long parseLong(Element parent, String localName) {
+        NodeList nl = parent.getElementsByTagNameNS("*", localName);
+        if (nl.getLength() == 0) return 0;
+        try { return Long.parseLong(nl.item(0).getTextContent().trim()); }
+        catch (NumberFormatException e) { return 0; }
     }
 
     private static final java.util.Set<String> CONNECTOR_GEOMS = new java.util.HashSet<>(java.util.Arrays.asList(
@@ -495,11 +528,15 @@ final class XlsxWorkbookDrawings {
             }
 
             // Anchor — find the twoCellAnchor or oneCellAnchor parent
-            int[] anchors = extractAnchor(picEl);
-            pic.setUpperLeftRow(anchors[0]);
-            pic.setUpperLeftColumn(anchors[1]);
-            pic.setLowerRightRow(anchors[2]);
-            pic.setLowerRightColumn(anchors[3]);
+            long[] anchors = extractAnchor(picEl);
+            pic.setUpperLeftRow((int) anchors[0]);
+            pic.setUpperLeftColumn((int) anchors[1]);
+            pic.setLowerRightRow((int) anchors[2]);
+            pic.setLowerRightColumn((int) anchors[3]);
+            pic.setUpperLeftRowOffset(anchors[4]);
+            pic.setUpperLeftColumnOffset(anchors[5]);
+            pic.setLowerRightRowOffset(anchors[6]);
+            pic.setLowerRightColumnOffset(anchors[7]);
 
             if (pic.getData() != null) ws.getPictures().add(pic);
         }
@@ -549,6 +586,14 @@ final class XlsxWorkbookDrawings {
                     chart.setChartEx(true);
                     chart.setRawGraphicFrameXml(elementToString(alternateContent));
                 }
+                // Preserve the cNvPr extension list (e.g. <a16:creationId>) so it
+                // round-trips without requiring the entire graphicFrame as raw XML.
+                NodeList cNvPrList = frame.getElementsByTagNameNS("*", "cNvPr");
+                if (cNvPrList.getLength() > 0) {
+                    Element cNvPrEl = (Element) cNvPrList.item(0);
+                    Element extLstEl = firstChildByLocalName(cNvPrEl, "extLst");
+                    if (extLstEl != null) chart.setRawCNvPrExtLst(elementToString(extLstEl));
+                }
                 // Load chart rels for ALL charts (standard and ChartEx)
                 String chartRelsPath = chartPath.substring(0, chartPath.lastIndexOf('/') + 1)
                     + "_rels/" + chartPath.substring(chartPath.lastIndexOf('/') + 1) + ".rels";
@@ -566,11 +611,15 @@ final class XlsxWorkbookDrawings {
             chart.setOriginalRelId(chartRId);
 
             // Anchor — extractAnchor walks up from frame through mc:AlternateContent to the anchor
-            int[] anchors = extractAnchor(frame);
-            chart.setUpperLeftRow(anchors[0]);
-            chart.setUpperLeftColumn(anchors[1]);
-            chart.setLowerRightRow(anchors[2]);
-            chart.setLowerRightColumn(anchors[3]);
+            long[] anchors = extractAnchor(frame);
+            chart.setUpperLeftRow((int) anchors[0]);
+            chart.setUpperLeftColumn((int) anchors[1]);
+            chart.setLowerRightRow((int) anchors[2]);
+            chart.setLowerRightColumn((int) anchors[3]);
+            chart.setUpperLeftRowOffset(anchors[4]);
+            chart.setUpperLeftColumnOffset(anchors[5]);
+            chart.setLowerRightRowOffset(anchors[6]);
+            chart.setLowerRightColumnOffset(anchors[7]);
 
             ws.getCharts().add(chart);
         }
@@ -580,12 +629,13 @@ final class XlsxWorkbookDrawings {
     // Private helpers
     // =========================================================================
 
-    private static String twoCellAnchor(int r1, int c1, int r2, int c2) {
+    private static String twoCellAnchor(int r1, long r1off, int c1, long c1off,
+                                        int r2, long r2off, int c2, long c2off) {
         return "<xdr:twoCellAnchor editAs=\"oneCell\">"
-             + "<xdr:from><xdr:col>" + c1 + "</xdr:col><xdr:colOff>0</xdr:colOff>"
-             + "<xdr:row>" + r1 + "</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>"
-             + "<xdr:to><xdr:col>" + c2 + "</xdr:col><xdr:colOff>0</xdr:colOff>"
-             + "<xdr:row>" + r2 + "</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>";
+             + "<xdr:from><xdr:col>" + c1 + "</xdr:col><xdr:colOff>" + c1off + "</xdr:colOff>"
+             + "<xdr:row>" + r1 + "</xdr:row><xdr:rowOff>" + r1off + "</xdr:rowOff></xdr:from>"
+             + "<xdr:to><xdr:col>" + c2 + "</xdr:col><xdr:colOff>" + c2off + "</xdr:colOff>"
+             + "<xdr:row>" + r2 + "</xdr:row><xdr:rowOff>" + r2off + "</xdr:rowOff></xdr:to>";
     }
 
     private static String picXml(int shapeId, String name, String rId) {
@@ -603,10 +653,14 @@ final class XlsxWorkbookDrawings {
              + "</xdr:pic><xdr:clientData/>";
     }
 
-    private static String graphicFrameXml(int shapeId, String name, String rId) {
+    private static String graphicFrameXml(int shapeId, String name, String rId,
+                                          String rawCNvPrExtLst) {
+        String cNvPr = rawCNvPrExtLst != null && !rawCNvPrExtLst.isEmpty()
+            ? "<xdr:cNvPr id=\"" + shapeId + "\" name=\"" + xmlAttr(name) + "\">" + rawCNvPrExtLst + "</xdr:cNvPr>"
+            : "<xdr:cNvPr id=\"" + shapeId + "\" name=\"" + xmlAttr(name) + "\"/>";
         return "<xdr:graphicFrame macro=\"\">"
              + "<xdr:nvGraphicFramePr>"
-             + "<xdr:cNvPr id=\"" + shapeId + "\" name=\"" + xmlAttr(name) + "\"/>"
+             + cNvPr
              + "<xdr:cNvGraphicFramePr/>"
              + "</xdr:nvGraphicFramePr>"
              + "<xdr:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/></xdr:xfrm>"
@@ -617,7 +671,7 @@ final class XlsxWorkbookDrawings {
              + "</xdr:graphicFrame><xdr:clientData/>";
     }
 
-    private static int[] extractAnchor(Element child) {
+    private static long[] extractAnchor(Element child) {
         // Walk up to the anchor element
         Node p = child.getParentNode();
         while (p != null && p.getNodeType() == Node.ELEMENT_NODE) {
@@ -625,32 +679,11 @@ final class XlsxWorkbookDrawings {
             if ("twoCellAnchor".equals(ln) || "oneCellAnchor".equals(ln)) break;
             p = p.getParentNode();
         }
-        if (p == null || p.getNodeType() != Node.ELEMENT_NODE) return new int[4];
-
-        Element anchor = (Element)p;
-        NodeList froms = anchor.getElementsByTagNameNS("*", "from");
-        NodeList tos   = anchor.getElementsByTagNameNS("*", "to");
-
-        int ulr = 0, ulc = 0, lrr = 0, lrc = 0;
-        if (froms.getLength() > 0) {
-            Element from = (Element)froms.item(0);
-            ulr = parseInt(from, "row");
-            ulc = parseInt(from, "col");
-        }
-        if (tos.getLength() > 0) {
-            Element to = (Element)tos.item(0);
-            lrr = parseInt(to, "row");
-            lrc = parseInt(to, "col");
-        }
-        return new int[]{ulr, ulc, lrr, lrc};
+        if (p == null || p.getNodeType() != Node.ELEMENT_NODE) return new long[8];
+        return extractAnchorFromElement((Element) p);
     }
 
-    private static int parseInt(Element parent, String localName) {
-        NodeList nl = parent.getElementsByTagNameNS("*", localName);
-        if (nl.getLength() == 0) return 0;
-        try { return Integer.parseInt(nl.item(0).getTextContent().trim()); }
-        catch (NumberFormatException e) { return 0; }
-    }
+
 
     static String resolveRelTarget(String baseEntry, String target) {
         if (target == null) return "";

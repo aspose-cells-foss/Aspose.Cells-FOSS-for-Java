@@ -15,5 +15,7 @@ public enum CellValueKind {
     /** The cell contains a date/time value. */
     DATE_TIME,
     /** The cell contains a formula. */
-    FORMULA
+    FORMULA,
+    /** The cell contains an error value (e.g. #N/A, #VALUE!, #REF!). */
+    ERROR
 }

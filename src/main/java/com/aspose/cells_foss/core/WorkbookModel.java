@@ -21,6 +21,10 @@ public final class WorkbookModel {
     private byte[] rawThemeXml;
     /** Raw XML of the default &lt;font&gt; element (fonts[0]) from the source styles.xml. */
     private String rawDefaultFontXml;
+    /** Verbatim bytes of xl/externalLinks/externalLink{N}.xml files, in order. */
+    private final List<byte[]> externalLinkXmls = new ArrayList<>();
+    /** Verbatim bytes of the corresponding xl/externalLinks/_rels/externalLink{N}.xml.rels files (null if absent). */
+    private final List<byte[]> externalLinkRels = new ArrayList<>();
 
     /**
      * Initializes a new WorkbookModel instance.
@@ -130,4 +134,9 @@ public final class WorkbookModel {
 
     public String getRawDefaultFontXml() { return rawDefaultFontXml; }
     public void setRawDefaultFontXml(String rawDefaultFontXml) { this.rawDefaultFontXml = rawDefaultFontXml; }
+
+    /** Returns the external link XML files (in index order, matching externalLink1, externalLink2, …). */
+    public List<byte[]> getExternalLinkXmls() { return externalLinkXmls; }
+    /** Returns the external link rels files (parallel to externalLinkXmls; element may be null). */
+    public List<byte[]> getExternalLinkRels() { return externalLinkRels; }
 }

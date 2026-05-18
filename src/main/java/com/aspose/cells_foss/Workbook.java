@@ -238,6 +238,10 @@ public class Workbook implements AutoCloseable {
             model.getDocumentProperties().copyFrom(loadedModel.getDocumentProperties());
             model.setRawThemeXml(loadedModel.getRawThemeXml());
             model.setRawDefaultFontXml(loadedModel.getRawDefaultFontXml());
+            model.getExternalLinkXmls().clear();
+            model.getExternalLinkXmls().addAll(loadedModel.getExternalLinkXmls());
+            model.getExternalLinkRels().clear();
+            model.getExternalLinkRels().addAll(loadedModel.getExternalLinkRels());
         } catch (CellsException e) {
             throw e;
         } catch (Exception e) {

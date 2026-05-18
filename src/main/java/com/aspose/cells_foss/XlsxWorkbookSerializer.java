@@ -101,9 +101,10 @@ public final class XlsxWorkbookSerializer {
         int totalTableCount = sheets.stream().mapToInt(ws -> ws.getListObjects().size()).sum();
         try (ZipOutputStream zip = new ZipOutputStream(stream, StandardCharsets.UTF_8)) {
             zip.setMethod(ZipOutputStream.DEFLATED);
+            int extLinkCount = model.getExternalLinkXmls().size();
             byte[] ctXml = XlsxWorkbookArchiveHelpers.contentTypesXml(sheets.size(), hasSst, hasDocProps,
                     hasDrawings, hasCharts, pendingChartXmls.keySet(), pendingMediaFiles,
-                    drawingXmls.size(), hasVml, hasTheme);
+                    drawingXmls.size(), hasVml, hasTheme, extLinkCount);
             ctXml = XlsxWorkbookArchiveHelpers.addTableContentTypes(ctXml, totalTableCount);
             XlsxWorkbookArchiveHelpers.write(zip, "[Content_Types].xml", ctXml);
             XlsxWorkbookArchiveHelpers.write(zip, "_rels/.rels", XlsxWorkbookArchiveHelpers.packageRelsXml(hasDocProps));
@@ -112,12 +113,25 @@ public final class XlsxWorkbookSerializer {
                 XlsxWorkbookArchiveHelpers.write(zip, "docProps/core.xml", buildCorePropertiesXml(model.getDocumentProperties().getCore()));
                 XlsxWorkbookArchiveHelpers.write(zip, "docProps/app.xml", buildAppPropertiesXml(model.getDocumentProperties().getExtended()));
             }
-            XlsxWorkbookArchiveHelpers.write(zip, "xl/_rels/workbook.xml.rels", XlsxWorkbookArchiveHelpers.workbookRelsXml(sheets.size(), hasSst, hasTheme));
+            XlsxWorkbookArchiveHelpers.write(zip, "xl/_rels/workbook.xml.rels",
+                XlsxWorkbookArchiveHelpers.workbookRelsXml(sheets.size(), hasSst, hasTheme, extLinkCount));
             if (hasTheme) {
                 byte[] themeBytes = model.getRawThemeXml() != null
                     ? model.getRawThemeXml()
                     : XlsxWorkbookArchiveHelpers.defaultThemeXml();
                 XlsxWorkbookArchiveHelpers.write(zip, "xl/theme/theme1.xml", themeBytes);
+            }
+
+            // External links — preserve verbatim so [1],[2]… references in defined names resolve correctly
+            for (int i = 0; i < extLinkCount; i++) {
+                XlsxWorkbookArchiveHelpers.write(zip,
+                    "xl/externalLinks/externalLink" + (i + 1) + ".xml",
+                    model.getExternalLinkXmls().get(i));
+                byte[] extRels = model.getExternalLinkRels().get(i);
+                if (extRels != null)
+                    XlsxWorkbookArchiveHelpers.write(zip,
+                        "xl/externalLinks/_rels/externalLink" + (i + 1) + ".xml.rels",
+                        extRels);
             }
 
             for (int i = 0; i < sheets.size(); i++) {
@@ -232,6 +246,14 @@ public final class XlsxWorkbookSerializer {
               .append("\" r:id=\"rId").append(i + 1).append("\"/>");
         }
         sb.append("</sheets>");
+        // External references — required so [1],[2]… in defined name formulas resolve to the link files
+        int extCount = model.getExternalLinkXmls().size();
+        if (extCount > 0) {
+            sb.append("<externalReferences>");
+            for (int i = 1; i <= extCount; i++)
+                sb.append("<externalReference r:id=\"rIdExt").append(i).append("\"/>");
+            sb.append("</externalReferences>");
+        }
         XlsxWorkbookDefinedNames.buildDefinedNamesXml(model, sb);
         sb.append("</workbook>");
         return sb.toString().getBytes(StandardCharsets.UTF_8);
@@ -298,12 +320,19 @@ public final class XlsxWorkbookSerializer {
                 int sIdx = styleTable.register(rec.getStyle(), isDate);
                 String sAttr = sIdx > 0 ? " s=\"" + sIdx + "\"" : "";
                 if (rec.getFormula() != null && !rec.getFormula().isEmpty()) {
-                    sb.append("<c r=\"").append(ref).append("\"").append(sAttr).append("><f>")
-                      .append(XlsxWorkbookSerializerCommon.xmlText(rec.getFormula())).append("</f>");
-                    if (rec.getValue() instanceof Number n) {
+                    boolean formulaError = rec.getValue() instanceof String s2 && s2.startsWith("#");
+                    sb.append("<c r=\"").append(ref).append("\"").append(sAttr);
+                    if (formulaError) sb.append(" t=\"e\"");
+                    sb.append("><f>").append(XlsxWorkbookSerializerCommon.xmlText(rec.getFormula())).append("</f>");
+                    if (formulaError) {
+                        sb.append("<v>").append(XlsxWorkbookSerializerCommon.xmlText((String) rec.getValue())).append("</v>");
+                    } else if (rec.getValue() instanceof Number n) {
                         sb.append("<v>").append(n).append("</v>");
                     }
                     sb.append("</c>");
+                } else if (rec.getKind() == CellValueKind.ERROR && rec.getValue() instanceof String s) {
+                    sb.append("<c r=\"").append(ref).append("\"").append(sAttr)
+                      .append(" t=\"e\"><v>").append(XlsxWorkbookSerializerCommon.xmlText(s)).append("</v></c>");
                 } else if (rec.getKind() == CellValueKind.STRING && rec.getValue() instanceof String s) {
                     int idx = sst.intern(s);
                     sb.append("<c r=\"").append(ref).append("\"").append(sAttr).append(" t=\"s\"><v>").append(idx).append("</v></c>");
@@ -524,6 +553,14 @@ public final class XlsxWorkbookSerializer {
             model.getWorksheets().add(ws);
         }
 
+        // xl/externalLinks/ — preserve verbatim so [1],[2]… references in defined names survive round-trip
+        for (int i = 1; ; i++) {
+            byte[] extXml = entries.get("xl/externalLinks/externalLink" + i + ".xml");
+            if (extXml == null) break;
+            model.getExternalLinkXmls().add(extXml);
+            model.getExternalLinkRels().add(entries.get("xl/externalLinks/_rels/externalLink" + i + ".xml.rels"));
+        }
+
         // xl/theme/theme1.xml — preserve verbatim so theme-based fill/font colors round-trip correctly
         byte[] themeBytes = entries.get("xl/theme/theme1.xml");
         if (themeBytes != null) model.setRawThemeXml(themeBytes);
@@ -693,16 +730,23 @@ public final class XlsxWorkbookSerializer {
                     rec.setFormula(fText);
                     rec.setKind(CellValueKind.FORMULA);
                     if (!vText.isEmpty()) {
-                        try {
-                            double numVal = Double.parseDouble(vText);
-                            if (!vText.contains(".") && !vText.contains("e") && !vText.contains("E")
-                                    && numVal >= Integer.MIN_VALUE && numVal <= Integer.MAX_VALUE) {
-                                rec.setValue((int) numVal);
-                            } else {
-                                rec.setValue(numVal);
-                            }
-                        } catch (NumberFormatException ignored) {}
+                        if ("e".equals(type)) {
+                            rec.setValue(vText); // cached error string, e.g. "#N/A"
+                        } else {
+                            try {
+                                double numVal = Double.parseDouble(vText);
+                                if (!vText.contains(".") && !vText.contains("e") && !vText.contains("E")
+                                        && numVal >= Integer.MIN_VALUE && numVal <= Integer.MAX_VALUE) {
+                                    rec.setValue((int) numVal);
+                                } else {
+                                    rec.setValue(numVal);
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
+                } else if ("e".equals(type)) {
+                    // Error cell (e.g. #N/A, #VALUE!) — preserve verbatim without shared-string lookup
+                    if (!vText.isEmpty()) { rec.setValue(vText); rec.setKind(CellValueKind.ERROR); }
                 } else if ("s".equals(type)) {
                     int idx = XlsxWorkbookSerializerCommon.parseInt(vText, -1);
                     String sv = idx >= 0 && idx < sst.length ? sst[idx] : "";
@@ -717,6 +761,10 @@ public final class XlsxWorkbookSerializer {
                     rec.setValue(s);
                     rec.setKind(CellValueKind.STRING);
                 } else if (!vText.isEmpty()) {
+                    if ("e".equals(type)) {
+                        // Shared-formula reference cell that returned an error
+                        rec.setValue(vText); rec.setKind(CellValueKind.ERROR); continue;
+                    }
                     double num;
                     try { num = Double.parseDouble(vText); }
                     catch (NumberFormatException ignored) { rec.setValue(vText); rec.setKind(CellValueKind.STRING); continue; }

@@ -31,6 +31,8 @@ This is an XLSX-focused spreadsheet library with a public object model plus inte
   Workbook validation helpers and validation messages.
 - `src/test/java/com/aspose/cells_foss/`
   JUnit 5 scenario-driven tests.
+- `docs/apidocs/`
+  Generated HTML Javadoc for the public API (`com.aspose.cells_foss` only). Regenerate with `mvn javadoc:javadoc`; do not edit by hand.
 - `target/`
   Build output. Do not edit generated contents directly.
 
@@ -41,6 +43,7 @@ Use Maven from the repository root.
 - Compile: `mvn compile`
 - Run tests: `mvn test`
 - Full build: `mvn clean package`
+- Generate Javadoc: `mvn javadoc:javadoc` → output at `docs/apidocs/index.html`
 
 When validating a change, prefer the smallest useful command first:
 

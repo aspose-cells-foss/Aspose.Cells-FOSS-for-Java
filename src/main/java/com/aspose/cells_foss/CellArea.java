@@ -69,13 +69,6 @@ public final class CellArea {
         return new CellArea(startRow, startColumn, endRow - startRow + 1, endColumn - startColumn + 1);
     }
 
-    /**
-     * Creates a CellArea from start and end cell names (e.g., "A1", "B2").
-     *
-     * @param startCellName  the start cell name
-     * @param endCellName    the end cell name
-     * @return a new CellArea
-     */
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -90,6 +83,13 @@ public final class CellArea {
         return 31 * (31 * (31 * firstRow + firstColumn) + totalRows) + totalColumns;
     }
 
+    /**
+     * Creates a CellArea from start and end cell names (e.g., "A1", "B2").
+     *
+     * @param startCellName  the start cell name
+     * @param endCellName    the end cell name
+     * @return a new CellArea
+     */
     public static CellArea createCellArea(String startCellName, String endCellName) {
         CellAddress start = CellAddress.parse(startCellName);
         CellAddress end = CellAddress.parse(endCellName);

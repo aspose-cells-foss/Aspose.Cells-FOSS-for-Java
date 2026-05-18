@@ -240,6 +240,85 @@ class CsCompatibilityTest {
     }
 
     // =========================================================================
+    // Freeze panes roundtrip
+    // =========================================================================
+
+    @Test
+    void file_and_stream_roundtrip_preserve_freeze_panes_rows_only() throws IOException {
+        Workbook wb = new Workbook();
+        wb.getWorksheets().get(0).freezePanes(3, 0, 3, 0);
+        Path path = tempDir.resolve("freeze-rows.xlsx");
+        wb.save(path.toString());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        wb.save(bos, SaveFormat.XLSX);
+
+        for (Workbook loaded : new Workbook[]{
+                new Workbook(path.toString()),
+                new Workbook(new ByteArrayInputStream(bos.toByteArray()))}) {
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen(), "rows-only freeze must survive roundtrip");
+            assertEquals(3, ws.getFreezedRows());
+            assertEquals(0, ws.getFreezedColumns());
+        }
+    }
+
+    @Test
+    void file_and_stream_roundtrip_preserve_freeze_panes_cols_only() throws IOException {
+        Workbook wb = new Workbook();
+        wb.getWorksheets().get(0).freezePanes(0, 2, 0, 2);
+        Path path = tempDir.resolve("freeze-cols.xlsx");
+        wb.save(path.toString());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        wb.save(bos, SaveFormat.XLSX);
+
+        for (Workbook loaded : new Workbook[]{
+                new Workbook(path.toString()),
+                new Workbook(new ByteArrayInputStream(bos.toByteArray()))}) {
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen(), "cols-only freeze must survive roundtrip");
+            assertEquals(0, ws.getFreezedRows());
+            assertEquals(2, ws.getFreezedColumns());
+        }
+    }
+
+    @Test
+    void file_and_stream_roundtrip_preserve_freeze_panes_both_axes() throws IOException {
+        Workbook wb = new Workbook();
+        wb.getWorksheets().get(0).freezePanes("D3", 2, 3);
+        Path path = tempDir.resolve("freeze-both.xlsx");
+        wb.save(path.toString());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        wb.save(bos, SaveFormat.XLSX);
+
+        for (Workbook loaded : new Workbook[]{
+                new Workbook(path.toString()),
+                new Workbook(new ByteArrayInputStream(bos.toByteArray()))}) {
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen(), "both-axis freeze must survive roundtrip");
+            assertEquals(2, ws.getFreezedRows());
+            assertEquals(3, ws.getFreezedColumns());
+        }
+    }
+
+    @Test
+    void file_and_stream_roundtrip_unfreeze_clears_pane() throws IOException {
+        Workbook wb = new Workbook();
+        Worksheet ws0 = wb.getWorksheets().get(0);
+        ws0.freezePanes(2, 2, 2, 2);
+        ws0.unFreezePanes();
+        Path path = tempDir.resolve("unfreeze.xlsx");
+        wb.save(path.toString());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        wb.save(bos, SaveFormat.XLSX);
+
+        for (Workbook loaded : new Workbook[]{
+                new Workbook(path.toString()),
+                new Workbook(new ByteArrayInputStream(bos.toByteArray()))}) {
+            assertFalse(loaded.getWorksheets().get(0).isFrozen(), "unfreeze must survive roundtrip");
+        }
+    }
+
+    // =========================================================================
     // Validation roundtrip
     // =========================================================================
 

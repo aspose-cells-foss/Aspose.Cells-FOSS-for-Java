@@ -46,6 +46,18 @@
                     <useModulePath>false</useModulePath>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.12.0</version>
+                <configuration>
+                    <outputDirectory>${project.basedir}/docs</outputDirectory>
+                    <packagenames>com.aspose.cells_foss</packagenames>
+                    <excludePackageNames>com.aspose.cells_foss.*</excludePackageNames>
+                    <use>false</use>
+                    <failOnWarnings>false</failOnWarnings>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

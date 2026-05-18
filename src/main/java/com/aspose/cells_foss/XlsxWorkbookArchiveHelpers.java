@@ -103,7 +103,7 @@ final class XlsxWorkbookArchiveHelpers {
                                    java.util.Set<String> chartParts,
                                    java.util.Map<String, byte[]> mediaParts,
                                    int drawingCount, boolean hasVml) {
-        return contentTypesXml(sheetCount, hasSst, hasDocProps, hasDrawings, hasCharts, chartParts, mediaParts, drawingCount, hasVml, false);
+        return contentTypesXml(sheetCount, hasSst, hasDocProps, hasDrawings, hasCharts, chartParts, mediaParts, drawingCount, hasVml, false, 0);
     }
 
     static byte[] contentTypesXml(int sheetCount, boolean hasSst, boolean hasDocProps,
@@ -111,6 +111,15 @@ final class XlsxWorkbookArchiveHelpers {
                                    java.util.Set<String> chartParts,
                                    java.util.Map<String, byte[]> mediaParts,
                                    int drawingCount, boolean hasVml, boolean hasTheme) {
+        return contentTypesXml(sheetCount, hasSst, hasDocProps, hasDrawings, hasCharts, chartParts, mediaParts, drawingCount, hasVml, hasTheme, 0);
+    }
+
+    static byte[] contentTypesXml(int sheetCount, boolean hasSst, boolean hasDocProps,
+                                   boolean hasDrawings, boolean hasCharts,
+                                   java.util.Set<String> chartParts,
+                                   java.util.Map<String, byte[]> mediaParts,
+                                   int drawingCount, boolean hasVml, boolean hasTheme,
+                                   int externalLinkCount) {
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
         sb.append("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">");
@@ -155,6 +164,9 @@ final class XlsxWorkbookArchiveHelpers {
                   .append("\" ContentType=\"").append(chartPartContentType(filename)).append("\"/>");
             }
         }
+        for (int i = 1; i <= externalLinkCount; i++)
+            sb.append("<Override PartName=\"/xl/externalLinks/externalLink").append(i)
+              .append(".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml\"/>");
         sb.append("</Types>");
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -202,6 +214,10 @@ final class XlsxWorkbookArchiveHelpers {
     }
 
     static byte[] workbookRelsXml(int sheetCount, boolean hasSst, boolean hasTheme) {
+        return workbookRelsXml(sheetCount, hasSst, hasTheme, 0);
+    }
+
+    static byte[] workbookRelsXml(int sheetCount, boolean hasSst, boolean hasTheme, int externalLinkCount) {
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
         sb.append("<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">");
@@ -216,8 +232,12 @@ final class XlsxWorkbookArchiveHelpers {
         if (hasTheme)
             sb.append("<Relationship Id=\"rId").append(nextId++)
               .append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/>");
-        sb.append("<Relationship Id=\"rId").append(nextId)
+        sb.append("<Relationship Id=\"rId").append(nextId++)
           .append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>");
+        for (int i = 1; i <= externalLinkCount; i++)
+            sb.append("<Relationship Id=\"rIdExt").append(i)
+              .append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLink\" Target=\"externalLinks/externalLink")
+              .append(i).append(".xml\"/>");
         sb.append("</Relationships>");
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -287,9 +307,10 @@ final class XlsxWorkbookArchiveHelpers {
     }
 
     private static String chartPartContentType(String filename) {
-        if (filename.startsWith("chartEx")) return "application/vnd.ms-office.chartex+xml";
-        if (filename.startsWith("style"))   return "application/vnd.ms-office.chartstyle+xml";
-        if (filename.startsWith("colors"))  return "application/vnd.ms-office.chartcolorstyle+xml";
+        if (filename.startsWith("chartEx"))    return "application/vnd.ms-office.chartex+xml";
+        if (filename.startsWith("style"))      return "application/vnd.ms-office.chartstyle+xml";
+        if (filename.startsWith("colors"))     return "application/vnd.ms-office.chartcolorstyle+xml";
+        if (filename.startsWith("userShapes")) return "application/vnd.openxmlformats-officedocument.drawingml.chartshapes+xml";
         return "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
     }
 

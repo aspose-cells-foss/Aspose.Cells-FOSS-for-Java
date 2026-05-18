@@ -13,8 +13,12 @@ public final class ChartModel {
     private String chartType = "unknown";
     private int upperLeftRow;
     private int upperLeftColumn;
+    private long upperLeftRowOffset;
+    private long upperLeftColumnOffset;
     private int lowerRightRow;
     private int lowerRightColumn;
+    private long lowerRightRowOffset;
+    private long lowerRightColumnOffset;
     private long extentCx;
     private long extentCy;
     private boolean isChartEx = false;
@@ -24,6 +28,8 @@ public final class ChartModel {
 
     /** Full verbatim XML of the mc:AlternateContent element (ChartEx only). */
     private String rawGraphicFrameXml;
+    /** Verbatim XML of the &lt;a:extLst&gt; child inside &lt;xdr:cNvPr&gt;, preserved for round-trip fidelity. */
+    private String rawCNvPrExtLst;
 
     /**
      * Chart-level relationships loaded from xl/charts/_rels/chart{N}.xml.rels.
@@ -49,11 +55,23 @@ public final class ChartModel {
     public int getUpperLeftColumn() { return upperLeftColumn; }
     public void setUpperLeftColumn(int upperLeftColumn) { this.upperLeftColumn = upperLeftColumn; }
 
+    public long getUpperLeftRowOffset() { return upperLeftRowOffset; }
+    public void setUpperLeftRowOffset(long v) { this.upperLeftRowOffset = v; }
+
+    public long getUpperLeftColumnOffset() { return upperLeftColumnOffset; }
+    public void setUpperLeftColumnOffset(long v) { this.upperLeftColumnOffset = v; }
+
     public int getLowerRightRow() { return lowerRightRow; }
     public void setLowerRightRow(int lowerRightRow) { this.lowerRightRow = lowerRightRow; }
 
     public int getLowerRightColumn() { return lowerRightColumn; }
     public void setLowerRightColumn(int lowerRightColumn) { this.lowerRightColumn = lowerRightColumn; }
+
+    public long getLowerRightRowOffset() { return lowerRightRowOffset; }
+    public void setLowerRightRowOffset(long v) { this.lowerRightRowOffset = v; }
+
+    public long getLowerRightColumnOffset() { return lowerRightColumnOffset; }
+    public void setLowerRightColumnOffset(long v) { this.lowerRightColumnOffset = v; }
 
     public long getExtentCx() { return extentCx; }
     public void setExtentCx(long extentCx) { this.extentCx = extentCx; }
@@ -69,6 +87,9 @@ public final class ChartModel {
 
     public String getRawGraphicFrameXml() { return rawGraphicFrameXml; }
     public void setRawGraphicFrameXml(String rawGraphicFrameXml) { this.rawGraphicFrameXml = rawGraphicFrameXml; }
+
+    public String getRawCNvPrExtLst() { return rawCNvPrExtLst; }
+    public void setRawCNvPrExtLst(String rawCNvPrExtLst) { this.rawCNvPrExtLst = rawCNvPrExtLst; }
 
     public List<String[]> getChartRels() { return chartRels; }
     public Map<String, byte[]> getChartRelContent() { return chartRelContent; }

@@ -1210,6 +1210,251 @@ class WorkbookTest {
     }
 
     // =========================================================================
+    // 4.12 Freeze Panes
+    // =========================================================================
+
+    /**
+     * Verifies that freeze panes defaults to unfrozen.
+     */
+    @Test
+    void WB_100_freezePanesDefaultUnfrozen() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        assertFalse(ws.isFrozen());
+        assertEquals(0, ws.getFreezedRows());
+        assertEquals(0, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freeze rows only sets freezed rows.
+     */
+    @Test
+    void WB_101_freezeRowsOnly() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes(3, 0, 3, 0);
+        assertTrue(ws.isFrozen());
+        assertEquals(3, ws.getFreezedRows());
+        assertEquals(0, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freeze columns only sets freezed columns.
+     */
+    @Test
+    void WB_102_freezeColumnsOnly() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes(0, 2, 0, 2);
+        assertTrue(ws.isFrozen());
+        assertEquals(0, ws.getFreezedRows());
+        assertEquals(2, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freeze rows and columns sets both.
+     */
+    @Test
+    void WB_103_freezeRowsAndColumns() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes(2, 3, 2, 3);
+        assertTrue(ws.isFrozen());
+        assertEquals(2, ws.getFreezedRows());
+        assertEquals(3, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that unfreeze clears all frozen panes.
+     */
+    @Test
+    void WB_104_unFreezePanesClearsFreeze() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes(2, 3, 2, 3);
+        ws.unFreezePanes();
+        assertFalse(ws.isFrozen());
+        assertEquals(0, ws.getFreezedRows());
+        assertEquals(0, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freeze panes by cell name parses correctly.
+     */
+    @Test
+    void WB_105_freezePanesByCellName() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes("B2", 1, 1);
+        assertTrue(ws.isFrozen());
+        assertEquals(1, ws.getFreezedRows());
+        assertEquals(1, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freeze panes by cell name C4 maps to 3 rows and 2 cols.
+     */
+    @Test
+    void WB_106_freezePanesByCellNameC4() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        ws.freezePanes("C4", 3, 2);
+        assertEquals(3, ws.getFreezedRows());
+        assertEquals(2, ws.getFreezedColumns());
+    }
+
+    /**
+     * Verifies that freezePanes with negative rows throws.
+     */
+    @Test
+    void WB_107_freezeNegativeRowsThrows() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        assertThrows(CellsException.class, () -> ws.freezePanes(0, 0, -1, 0));
+    }
+
+    /**
+     * Verifies that freezePanes with negative cols throws.
+     */
+    @Test
+    void WB_108_freezeNegativeColsThrows() {
+        Workbook wb = new Workbook();
+        Worksheet ws = wb.getWorksheets().get(0);
+        assertThrows(CellsException.class, () -> ws.freezePanes(0, 0, 0, -1));
+    }
+
+    /**
+     * Verifies that frozen rows roundtrip through XLSX serialization.
+     */
+    @Test
+    void WB_109_frozenRowsRoundtrip() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-rows.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(3, 0, 3, 0);
+                wb.save(path);
+            }
+            Workbook loaded = new Workbook(path);
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen());
+            assertEquals(3, ws.getFreezedRows());
+            assertEquals(0, ws.getFreezedColumns());
+        }
+    }
+
+    /**
+     * Verifies that frozen columns roundtrip through XLSX serialization.
+     */
+    @Test
+    void WB_110_frozenColumnsRoundtrip() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-cols.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(0, 2, 0, 2);
+                wb.save(path);
+            }
+            Workbook loaded = new Workbook(path);
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen());
+            assertEquals(0, ws.getFreezedRows());
+            assertEquals(2, ws.getFreezedColumns());
+        }
+    }
+
+    /**
+     * Verifies that frozen rows and columns both roundtrip through XLSX serialization.
+     */
+    @Test
+    void WB_111_frozenRowsAndColumnsRoundtrip() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-both.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(2, 3, 2, 3);
+                wb.save(path);
+            }
+            Workbook loaded = new Workbook(path);
+            Worksheet ws = loaded.getWorksheets().get(0);
+            assertTrue(ws.isFrozen());
+            assertEquals(2, ws.getFreezedRows());
+            assertEquals(3, ws.getFreezedColumns());
+        }
+    }
+
+    /**
+     * Verifies that unfrozen state roundtrips (no pane element written).
+     */
+    @Test
+    void WB_112_unfrozenRoundtrip() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("no-freeze.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.save(path);
+            }
+            String wsXml = ZipPackageHelper.readEntryText(path, "xl/worksheets/sheet1.xml");
+            assertFalse(wsXml.contains("<pane"), "No pane element should appear when not frozen");
+            assertFalse(new Workbook(path).getWorksheets().get(0).isFrozen());
+        }
+    }
+
+    /**
+     * Verifies freeze pane XML has correct attributes for both-axis freeze.
+     */
+    @Test
+    void WB_113_freezePaneXmlStructureBothAxes() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-xml.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(2, 3, 2, 3);
+                wb.save(path);
+            }
+            String wsXml = ZipPackageHelper.readEntryText(path, "xl/worksheets/sheet1.xml");
+            assertTrue(wsXml.contains("state=\"frozen\""));
+            assertTrue(wsXml.contains("xSplit=\"3\""));
+            assertTrue(wsXml.contains("ySplit=\"2\""));
+            assertTrue(wsXml.contains("topLeftCell=\"D3\""));
+            assertTrue(wsXml.contains("activePane=\"bottomRight\""));
+        }
+    }
+
+    /**
+     * Verifies rows-only freeze pane XML uses bottomLeft activePane.
+     */
+    @Test
+    void WB_114_freezeRowsOnlyPaneXml() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-rows-xml.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(1, 0, 1, 0);
+                wb.save(path);
+            }
+            String wsXml = ZipPackageHelper.readEntryText(path, "xl/worksheets/sheet1.xml");
+            assertTrue(wsXml.contains("ySplit=\"1\""));
+            assertFalse(wsXml.contains("xSplit="));
+            assertTrue(wsXml.contains("activePane=\"bottomLeft\""));
+            assertTrue(wsXml.contains("topLeftCell=\"A2\""));
+        }
+    }
+
+    /**
+     * Verifies columns-only freeze pane XML uses topRight activePane.
+     */
+    @Test
+    void WB_115_freezeColumnsOnlyPaneXml() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("freeze-cols-xml.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().get(0).freezePanes(0, 1, 0, 1);
+                wb.save(path);
+            }
+            String wsXml = ZipPackageHelper.readEntryText(path, "xl/worksheets/sheet1.xml");
+            assertTrue(wsXml.contains("xSplit=\"1\""));
+            assertFalse(wsXml.contains("ySplit="));
+            assertTrue(wsXml.contains("activePane=\"topRight\""));
+            assertTrue(wsXml.contains("topLeftCell=\"B1\""));
+        }
+    }
+
+    // =========================================================================
     // Helpers
     // =========================================================================
 

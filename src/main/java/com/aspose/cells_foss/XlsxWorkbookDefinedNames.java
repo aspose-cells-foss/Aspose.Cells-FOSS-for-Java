@@ -50,7 +50,7 @@ final class XlsxWorkbookDefinedNames {
         // Print area / print titles
         for (int i = 0; i < sheets.size(); i++) {
             PageSetupModel ps = sheets.get(i).getPageSetup();
-            String sheetName = sheets.get(i).getName();
+            String sheetName = quoteSheetName(sheets.get(i).getName());
             if (ps.getPrintArea() != null && !ps.getPrintArea().isEmpty()) {
                 sb.append("<definedName name=\"_xlnm.Print_Area\" localSheetId=\"").append(i)
                   .append("\">").append(XlsxWorkbookSerializerCommon.xmlText(sheetName + "!" + ps.getPrintArea()))
@@ -70,6 +70,18 @@ final class XlsxWorkbookDefinedNames {
             }
         }
         sb.append("</definedNames>");
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    /** Wraps a sheet name in single quotes when it contains characters that are special in formula syntax. */
+    private static String quoteSheetName(String name) {
+        // Names with only letters, digits, and underscores (not starting with digit) are safe unquoted.
+        if (name != null && name.matches("[A-Za-z_][A-Za-z0-9_.]*")) return name;
+        // Escape any embedded single quotes by doubling them, then wrap.
+        return "'" + (name == null ? "" : name.replace("'", "''")) + "'";
     }
 
     // =========================================================================

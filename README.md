@@ -57,6 +57,7 @@ Common commands:
 mvn compile
 mvn test
 mvn clean package
+mvn javadoc:javadoc   # generates docs/apidocs/index.html
 ```
 
 ## Quick Start
@@ -190,6 +191,9 @@ src/test/java/com/aspose/cells_foss/
 
 src/test/java/com/aspose/cells_foss/unit/
   Fast, focused unit tests for individual API classes without XLSX I/O
+
+docs/apidocs/
+  Generated HTML Javadoc for the public API. Run `mvn javadoc:javadoc` to regenerate.
 ```
 
 ## Testing Coverage
