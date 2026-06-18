@@ -106,6 +106,20 @@ jobs:
     runs-on: [self-hosted, Windows, maven-pilot]
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 — no GPG import (dry-run)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          # GPG import intentionally omitted — dry-run never signs artifacts
+
       - name: Verify toolchain prerequisites
         shell: powershell
         run: |
@@ -123,19 +137,6 @@ jobs:
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
           Write-Host '::notice::Toolchain OK: Java 17, Maven 3.x, Git, GPG, gh all present.'
 
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17 — no GPG import (dry-run)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-          server-id: central
-          server-username: MAVEN_CENTRAL_USERNAME
-          server-password: MAVEN_CENTRAL_PASSWORD
-          # GPG import intentionally omitted — dry-run never signs artifacts
 
       - name: Guard Maven coordinates
         shell: powershell
