@@ -132,9 +132,13 @@ jobs:
       - name: Guard Maven coordinates
         shell: powershell
         run: |
-          $GID = (& mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout 2>&1)[-1]
-          $AID = (& mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout 2>&1)[-1]
-          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          [xml]$pom = Get-Content pom.xml
+          $GID = $pom.project.groupId
+          $AID = $pom.project.artifactId
+          $VER = $pom.project.version
+          if ([string]::IsNullOrEmpty($GID) -or [string]::IsNullOrEmpty($AID) -or [string]::IsNullOrEmpty($VER)) {
+            Write-Error 'Failed to parse coordinates from pom.xml'; exit 1
+          }
           if ($GID -ne 'org.aspose')        { Write-Error "groupId must be org.aspose (got $GID)"; exit 1 }
           if ($AID -ne 'aspose-cells-foss') { Write-Error "artifactId must be aspose-cells-foss (got $AID)"; exit 1 }
           if ($VER -match '-SNAPSHOT')       { Write-Error 'SNAPSHOT versions cannot be released'; exit 1 }
@@ -143,7 +147,8 @@ jobs:
       - name: Check version not already on Maven Central
         shell: powershell
         run: |
-          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          [xml]$pom = Get-Content pom.xml
+          $VER = $pom.project.version
           $URL = "https://repo1.maven.org/maven2/org/aspose/aspose-cells-foss/$VER/"
           try {
             $r = Invoke-WebRequest -Uri $URL -Method Head -UseBasicParsing -ErrorAction Stop
@@ -171,7 +176,8 @@ jobs:
         shell: powershell
         run: |
           $AID = 'aspose-cells-foss'
-          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          [xml]$pom = Get-Content pom.xml
+          $VER = $pom.project.version
           @("target\$AID-$VER.jar","target\$AID-$VER-sources.jar","target\$AID-$VER-javadoc.jar") | ForEach-Object {
             if (-not (Test-Path $_)) { Write-Error "Missing required artifact: $_"; exit 1 }
           }
