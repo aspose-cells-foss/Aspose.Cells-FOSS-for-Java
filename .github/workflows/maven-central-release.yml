@@ -138,7 +138,7 @@ jobs:
           if ($GID -ne 'org.aspose')        { Write-Error "groupId must be org.aspose (got $GID)"; exit 1 }
           if ($AID -ne 'aspose-cells-foss') { Write-Error "artifactId must be aspose-cells-foss (got $AID)"; exit 1 }
           if ($VER -match '-SNAPSHOT')       { Write-Error 'SNAPSHOT versions cannot be released'; exit 1 }
-          Write-Host "Coordinates verified: $GID:$AID:$VER"
+          Write-Host "Coordinates verified: ${GID}:${AID}:${VER}"
 
       - name: Check version not already on Maven Central
         shell: powershell
