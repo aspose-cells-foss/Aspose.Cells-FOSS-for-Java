@@ -162,8 +162,9 @@ jobs:
         shell: powershell
         run: |
           $pgp = & git grep -nI -E 'BEGIN PGP PRIVATE KEY BLOCK|BEGIN PGP PUBLIC KEY BLOCK' -- ':(exclude).github/workflows/maven-central-release.yml' 2>&1
-          if ($pgp) { Write-Error 'PGP key block found in tracked files — aborting'; exit 1 }
+          if ($pgp) { Write-Error 'PGP key block found in tracked files -- aborting'; exit 1 }
           Write-Host 'Secret scan: CLEAN'
+          exit 0
 
       - name: Build, test, and package (gpg.skip=true)
         shell: powershell
