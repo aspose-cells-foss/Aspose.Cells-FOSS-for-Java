@@ -155,7 +155,7 @@ jobs:
             Write-Error "Version $VER already exists on Maven Central: $URL"; exit 1
           } catch {
             if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
-            Write-Host "Version $VER not yet on Maven Central — OK."
+            Write-Host "Version $VER not yet on Maven Central -- OK."
           }
 
       - name: Secret scan tracked files
