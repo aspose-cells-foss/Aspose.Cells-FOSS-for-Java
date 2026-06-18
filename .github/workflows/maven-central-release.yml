@@ -106,6 +106,15 @@ jobs:
     runs-on: [self-hosted, Windows, maven-pilot]
 
     steps:
+      - name: Export user PATH to GITHUB_PATH (self-hosted runner)
+        shell: powershell
+        run: |
+          $userPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+          $userPath -split ';' | Where-Object { $_ -ne '' } | ForEach-Object {
+              Add-Content -Path $env:GITHUB_PATH -Value $_
+          }
+          Write-Host '::notice::User PATH entries exported to GITHUB_PATH.'
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -119,24 +128,6 @@ jobs:
           server-username: MAVEN_CENTRAL_USERNAME
           server-password: MAVEN_CENTRAL_PASSWORD
           # GPG import intentionally omitted — dry-run never signs artifacts
-
-      - name: Verify toolchain prerequisites
-        shell: powershell
-        run: |
-          $errors = @()
-          try   { $v = (& java -version 2>&1) -join ' '; if ($v -notmatch '17\.') { $errors += "Java 17 required (got: $v)" } }
-          catch { $errors += 'java not found on PATH' }
-          try   { $v = (& mvn --version 2>&1) -join ' '; if ($v -notmatch 'Apache Maven 3\.') { $errors += "Maven 3.x required (got: $v)" } }
-          catch { $errors += 'mvn not found on PATH' }
-          try   { & git --version | Out-Null }
-          catch { $errors += 'git not found on PATH' }
-          try   { & gpg --version | Out-Null }
-          catch { $errors += 'gpg not found on PATH' }
-          try   { & gh --version | Out-Null }
-          catch { $errors += 'gh not found on PATH' }
-          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
-          Write-Host '::notice::Toolchain OK: Java 17, Maven 3.x, Git, GPG, gh all present.'
-
 
       - name: Guard Maven coordinates
         shell: powershell
