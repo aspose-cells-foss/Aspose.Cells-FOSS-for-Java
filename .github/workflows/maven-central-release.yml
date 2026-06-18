@@ -232,7 +232,8 @@ jobs:
           [ "$AID" = "aspose-cells-foss" ] || { echo "artifactId must be aspose-cells-foss (got $AID)"; exit 1; }
           case "$VER" in *-SNAPSHOT) echo "SNAPSHOT versions cannot be released"; exit 1 ;; esac
           TAG="${{ github.event.release.tag_name }}"
-          [ "$TAG" = "v$VER" ] || { echo "Tag $TAG does not match pom.xml version v$VER"; exit 1; }
+          TAG_VER="${TAG#[vV]}"
+          [ "$TAG_VER" = "$VER" ] || { echo "Tag $TAG does not match pom.xml version $VER"; exit 1; }
 
       - name: Check version not already on Maven Central
         shell: bash
