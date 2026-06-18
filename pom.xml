@@ -7,7 +7,7 @@
 
     <groupId>org.aspose</groupId>
     <artifactId>aspose-cells-foss</artifactId>
-    <version>1.0.0</version>
+    <version>26.5.0</version>
     <packaging>jar</packaging>
 
     <name>Aspose.Cells FOSS for Java</name>
