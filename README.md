@@ -3,6 +3,18 @@
 Aspose.Cells FOSS for Java is a Java 17 spreadsheet library for creating, loading, modifying, and saving Excel `.xlsx` workbooks.
 It exposes a user-facing API in `com.aspose.cells_foss` and keeps OOXML packaging, XML mapping, and XLSX serialization inside this repository.
 
+## Installation
+
+Add the following dependency to your `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.aspose</groupId>
+    <artifactId>aspose-cells-foss</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
 ## Current Scope
 
 - Load formats: `AUTO`, `XLSX`
@@ -226,7 +238,6 @@ Representative test areas include:
 - The main public API lives in `com.aspose.cells_foss`
 - XLSX serialization and OOXML handling are implemented inside this repository
 - If you change supported behavior, update `README.md`, `Agents.md`, and tests together
-- Release history for the published baseline is in `RELEASE_NOTES.md`
 
 ## License
 

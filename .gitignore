@@ -1,0 +1,18 @@
+target/
+*.asc
+.m2/
+*.class
+
+# Local runner / simulation (never committed)
+.secrets
+.env.act
+*.private.asc
+
+# Self-hosted runner (never committed)
+.runner/
+_work/
+
+# act config output
+/output
+# Test fixtures (auto-generated, not distributed)
+/src/test/resources/Input

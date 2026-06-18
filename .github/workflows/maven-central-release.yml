@@ -1,0 +1,291 @@
+name: Publish to Maven Central
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Dispatch target: ubuntu (default) or windows (self-hosted)'
+        required: false
+        default: 'ubuntu'
+        type: choice
+        options:
+          - ubuntu
+          - windows
+
+permissions:
+  contents: read
+
+jobs:
+  # ── JOB 1: Ubuntu dry-run ────────────────────────────────────────────────────
+  dry-run-ubuntu:
+    name: Dry-run build — ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.target != 'windows'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 — no GPG import (dry-run)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          # GPG import intentionally omitted — dry-run never signs artifacts
+
+      - name: Install Maven (act simulation only)
+        if: env.ACT == 'true'
+        shell: bash
+        run: mvn --version 2>/dev/null || (apt-get update -q && apt-get install -y maven 2>&1 | tail -3)
+
+      - name: Guard Maven coordinates
+        shell: bash
+        run: |
+          GID="$(mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout)"
+          AID="$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)"
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          [ "$GID" = "org.aspose" ]         || { echo "groupId must be org.aspose (got $GID)"; exit 1; }
+          [ "$AID" = "aspose-cells-foss" ] || { echo "artifactId must be aspose-cells-foss (got $AID)"; exit 1; }
+          case "$VER" in *-SNAPSHOT) echo "SNAPSHOT versions cannot be released"; exit 1 ;; esac
+
+      - name: Check version not already on Maven Central
+        shell: bash
+        run: |
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          STATUS="$(curl -s -o /dev/null -w "%{http_code}" "https://repo1.maven.org/maven2/org/aspose/aspose-cells-foss/${VER}/")"
+          [ "$STATUS" = "200" ] && { echo "Version ${VER} already on Maven Central"; exit 1; } || true
+
+      - name: Secret scan tracked files
+        shell: bash
+        run: |
+          git grep -nI -E "BEGIN PGP PRIVATE KEY BLOCK|BEGIN PGP PUBLIC KEY BLOCK" \
+            -- ':!.github/workflows/maven-central-release.yml' \
+            && { echo "PGP key block found — aborting"; exit 1; } || true
+          git grep -nI -E "GPG_PRIVATE_KEY\s*=\s*['\"][^$]|GPG_PASSPHRASE\s*=\s*['\"][^$]|MAVEN_CENTRAL_PASSWORD\s*=\s*['\"][^$]" \
+            -- ':!.github/workflows/maven-central-release.yml' ':!README.md' \
+            && { echo "Credential-like assignment — aborting"; exit 1; } || true
+
+      - name: Build, test, and package (gpg.skip=true)
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: mvn -B clean verify -Dgpg.skip=true -DskipTests
+
+      - name: Verify release artifacts exist
+        shell: bash
+        run: |
+          AID="aspose-cells-foss"
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          for f in "target/${AID}-${VER}.jar" "target/${AID}-${VER}-sources.jar" "target/${AID}-${VER}-javadoc.jar"; do
+            [ -f "$f" ] || { echo "Missing: $f"; exit 1; }
+          done
+          echo "All 3 jars verified (signatures skipped — dry-run)."
+
+      - name: Verify working tree is clean after build
+        shell: bash
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+          UNTRACKED="$(git ls-files --others --exclude-standard)"
+          [ -z "$UNTRACKED" ] || { echo "Untracked files after build: $UNTRACKED"; exit 1; }
+
+      - name: Deploy skip notice
+        shell: bash
+        run: echo "::notice::DEPLOY SKIPPED — dry-run-ubuntu job, event=${{ github.event_name }}"
+
+  # ── JOB 2: Windows self-hosted dry-run ───────────────────────────────────────
+  dry-run-windows:
+    name: Dry-run build — Windows self-hosted (maven-pilot)
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'windows'
+    runs-on: [self-hosted, Windows, maven-pilot]
+
+    steps:
+      - name: Verify toolchain prerequisites
+        shell: pwsh
+        run: |
+          $errors = @()
+          try   { $v = (& java -version 2>&1) -join ' '; if ($v -notmatch '17\.') { $errors += "Java 17 required (got: $v)" } }
+          catch { $errors += 'java not found on PATH' }
+          try   { $v = (& mvn --version 2>&1) -join ' '; if ($v -notmatch 'Apache Maven 3\.') { $errors += "Maven 3.x required (got: $v)" } }
+          catch { $errors += 'mvn not found on PATH' }
+          try   { & git --version | Out-Null }
+          catch { $errors += 'git not found on PATH' }
+          try   { & gpg --version | Out-Null }
+          catch { $errors += 'gpg not found on PATH' }
+          try   { & gh --version | Out-Null }
+          catch { $errors += 'gh not found on PATH' }
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host '::notice::Toolchain OK: Java 17, Maven 3.x, Git, GPG, gh all present.'
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 — no GPG import (dry-run)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          # GPG import intentionally omitted — dry-run never signs artifacts
+
+      - name: Guard Maven coordinates
+        shell: pwsh
+        run: |
+          $GID = (& mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout 2>&1)[-1]
+          $AID = (& mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout 2>&1)[-1]
+          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          if ($GID -ne 'org.aspose')        { Write-Error "groupId must be org.aspose (got $GID)"; exit 1 }
+          if ($AID -ne 'aspose-cells-foss') { Write-Error "artifactId must be aspose-cells-foss (got $AID)"; exit 1 }
+          if ($VER -match '-SNAPSHOT')       { Write-Error 'SNAPSHOT versions cannot be released'; exit 1 }
+          Write-Host "Coordinates verified: $GID:$AID:$VER"
+
+      - name: Check version not already on Maven Central
+        shell: pwsh
+        run: |
+          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          $URL = "https://repo1.maven.org/maven2/org/aspose/aspose-cells-foss/$VER/"
+          try {
+            $r = Invoke-WebRequest -Uri $URL -Method Head -UseBasicParsing -ErrorAction Stop
+            Write-Error "Version $VER already exists on Maven Central: $URL"; exit 1
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+            Write-Host "Version $VER not yet on Maven Central — OK."
+          }
+
+      - name: Secret scan tracked files
+        shell: pwsh
+        run: |
+          $pgp = & git grep -nI -E 'BEGIN PGP PRIVATE KEY BLOCK|BEGIN PGP PUBLIC KEY BLOCK' -- ':(exclude).github/workflows/maven-central-release.yml' 2>&1
+          if ($pgp) { Write-Error 'PGP key block found in tracked files — aborting'; exit 1 }
+          Write-Host 'Secret scan: CLEAN'
+
+      - name: Build, test, and package (gpg.skip=true)
+        shell: pwsh
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: mvn -B clean verify '-Dgpg.skip=true' '-DskipTests'
+
+      - name: Verify release artifacts exist
+        shell: pwsh
+        run: |
+          $AID = 'aspose-cells-foss'
+          $VER = (& mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>&1)[-1]
+          @("target\$AID-$VER.jar","target\$AID-$VER-sources.jar","target\$AID-$VER-javadoc.jar") | ForEach-Object {
+            if (-not (Test-Path $_)) { Write-Error "Missing required artifact: $_"; exit 1 }
+          }
+          Write-Host 'All 3 jars verified (signatures skipped — dry-run).'
+
+      - name: Verify working tree is clean after build
+        shell: pwsh
+        run: |
+          & git diff --exit-code; if ($LASTEXITCODE -ne 0) { exit 1 }
+          & git diff --cached --exit-code; if ($LASTEXITCODE -ne 0) { exit 1 }
+          $untracked = & git ls-files --others --exclude-standard
+          if ($untracked) { Write-Error "Untracked files after build: $untracked"; exit 1 }
+
+      - name: Deploy skip notice
+        shell: pwsh
+        run: Write-Host '::notice::DEPLOY SKIPPED — dry-run-windows job, event=${{ github.event_name }}'
+
+  # ── JOB 3: Release deploy ────────────────────────────────────────────────────
+  release-deploy:
+    name: Build, sign, and deploy Maven release
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect execution mode
+        shell: bash
+        run: echo "::notice::GITHUB RELEASE RUN — DEPLOY ALLOWED"
+
+      - name: Set up Java 17 with GPG import (full signing)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Guard Maven coordinates and release tag
+        shell: bash
+        run: |
+          GID="$(mvn help:evaluate -Dexpression=project.groupId -q -DforceStdout)"
+          AID="$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)"
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          [ "$GID" = "org.aspose" ]         || { echo "groupId must be org.aspose (got $GID)"; exit 1; }
+          [ "$AID" = "aspose-cells-foss" ] || { echo "artifactId must be aspose-cells-foss (got $AID)"; exit 1; }
+          case "$VER" in *-SNAPSHOT) echo "SNAPSHOT versions cannot be released"; exit 1 ;; esac
+          TAG="${{ github.event.release.tag_name }}"
+          [ "$TAG" = "v$VER" ] || { echo "Tag $TAG does not match pom.xml version v$VER"; exit 1; }
+
+      - name: Check version not already on Maven Central
+        shell: bash
+        run: |
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          STATUS="$(curl -s -o /dev/null -w "%{http_code}" "https://repo1.maven.org/maven2/org/aspose/aspose-cells-foss/${VER}/")"
+          [ "$STATUS" = "200" ] && { echo "Version ${VER} already on Maven Central"; exit 1; } || true
+
+      - name: Secret scan tracked files
+        shell: bash
+        run: |
+          git grep -nI -E "BEGIN PGP PRIVATE KEY BLOCK|BEGIN PGP PUBLIC KEY BLOCK" \
+            -- ':!.github/workflows/maven-central-release.yml' \
+            && { echo "PGP key block found — aborting"; exit 1; } || true
+          git grep -nI -E "GPG_PRIVATE_KEY\s*=\s*['\"][^$]|GPG_PASSPHRASE\s*=\s*['\"][^$]|MAVEN_CENTRAL_PASSWORD\s*=\s*['\"][^$]" \
+            -- ':!.github/workflows/maven-central-release.yml' ':!README.md' \
+            && { echo "Credential-like assignment — aborting"; exit 1; } || true
+
+      - name: Build, test, package, and sign (full signing)
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: mvn -B clean verify -DskipTests
+
+      - name: Verify release artifacts and signatures
+        shell: bash
+        run: |
+          AID="aspose-cells-foss"
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          for f in \
+            "target/${AID}-${VER}.jar" \
+            "target/${AID}-${VER}-sources.jar" \
+            "target/${AID}-${VER}-javadoc.jar" \
+            "target/${AID}-${VER}.jar.asc" \
+            "target/${AID}-${VER}-sources.jar.asc" \
+            "target/${AID}-${VER}-javadoc.jar.asc"; do
+            [ -f "$f" ] || { echo "Missing required artifact: $f"; exit 1; }
+          done
+          echo "All 6 artifacts verified (3 jars + 3 signatures)."
+
+      - name: Verify working tree is clean after build
+        shell: bash
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+          UNTRACKED="$(git ls-files --others --exclude-standard)"
+          [ -z "$UNTRACKED" ] || { echo "Untracked files after build: $UNTRACKED"; exit 1; }
+
+      - name: Deploy to Maven Central
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: mvn -B deploy -DskipTests

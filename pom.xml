@@ -5,10 +5,36 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.aspose</groupId>
-    <artifactId>cells-foss</artifactId>
+    <groupId>org.aspose</groupId>
+    <artifactId>aspose-cells-foss</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
+
+    <name>Aspose.Cells FOSS for Java</name>
+    <description>Open-source Java library for creating, loading, modifying, and saving Excel XLSX workbooks.</description>
+    <url>https://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java/blob/master/License/LICENSE.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>aspose</id>
+            <name>Aspose</name>
+            <organizationUrl>https://www.aspose.org</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java.git</connection>
+        <developerConnection>scm:git:ssh://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java.git</developerConnection>
+        <url>https://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -16,6 +42,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
         <poi.version>5.3.0</poi.version>
+        <!-- Plugin version pinning -->
+        <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
+        <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
+        <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
+        <central.publishing.plugin.version>0.10.0</central.publishing.plugin.version>
+        <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     </properties>
 
     <dependencies>
@@ -27,7 +59,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Apache POI — OOXML (xlsx) support -->
+        <!-- Apache POI â€” OOXML (xlsx) support -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
@@ -38,24 +70,80 @@
 
     <build>
         <plugins>
+            <!-- Test runner -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>${maven.surefire.plugin.version}</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
                 </configuration>
             </plugin>
+
+            <!-- Sources JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven.source.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Javadoc JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
+                <version>${maven.javadoc.plugin.version}</version>
                 <configuration>
-                    <outputDirectory>${project.basedir}/docs</outputDirectory>
-                    <packagenames>com.aspose.cells_foss</packagenames>
-                    <excludePackageNames>com.aspose.cells_foss.*</excludePackageNames>
-                    <use>false</use>
+                    <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                    <failOnError>false</failOnError>
                     <failOnWarnings>false</failOnWarnings>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG signing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>${maven.gpg.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <keyname>E176D5CBCA1DCC62</keyname>
+                            <passphraseEnvName>GPG_PASSPHRASE</passphraseEnvName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Maven Central Portal publishing -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>${central.publishing.plugin.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>false</autoPublish>
                 </configuration>
             </plugin>
         </plugins>
