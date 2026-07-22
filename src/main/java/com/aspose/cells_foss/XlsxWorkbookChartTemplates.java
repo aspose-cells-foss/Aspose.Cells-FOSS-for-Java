@@ -14,10 +14,13 @@ final class XlsxWorkbookChartTemplates {
     /** Returns the chart XML bytes for the given type, with {{DATA}} replaced by dataRange. */
     static byte[] build(ChartType type, String dataRange) {
         String inner = innerXml(type, dataRange);
+        // CT_Chart requires view3D as a direct child of <c:chart>, before <c:plotArea>.
+        String view3d = needsView3D(type) ? view3d() : "";
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                 + "<c:chartSpace xmlns:c=\"" + C + "\" xmlns:a=\"" + A + "\" xmlns:r=\"" + R + "\">"
                 + "<c:chart>"
                 + "<c:autoTitleDeleted val=\"1\"/>"
+                + view3d
                 + "<c:plotArea>"
                 + inner
                 + "</c:plotArea>"
@@ -26,6 +29,14 @@ final class XlsxWorkbookChartTemplates {
                 + "</c:chart>"
                 + "</c:chartSpace>";
         return xml.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static boolean needsView3D(ChartType type) {
+        return switch (type) {
+            case COLUMN_3D, BAR_3D, LINE_3D, AREA_3D, PIE_3D,
+                 SURFACE_3D, SURFACE_WIREFRAME_3D -> true;
+            default -> false;
+        };
     }
 
     private static String innerXml(ChartType type, String data) {
@@ -51,13 +62,13 @@ final class XlsxWorkbookChartTemplates {
             case BUBBLE  -> "<c:bubbleChart>" + serBubble(data) + ref2 + "</c:bubbleChart>" + ax2d;
             case RADAR   -> "<c:radarChart><c:radarStyle val=\"standard\"/>" + s + ref2 + "</c:radarChart>" + ax2d;
             case STOCK   -> "<c:stockChart>" + serStock(data) + ref2 + "</c:stockChart>" + ax2d;
-            case COLUMN_3D -> "<c:bar3DChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/>" + s + "<c:shape val=\"box\"/>" + ref3 + "</c:bar3DChart>" + ax3d + view3d();
-            case BAR_3D    -> "<c:bar3DChart><c:barDir val=\"bar\"/><c:grouping val=\"clustered\"/>" + s + "<c:shape val=\"box\"/>" + ref3 + "</c:bar3DChart>" + ax3dBar + view3d();
-            case LINE_3D   -> "<c:line3DChart><c:grouping val=\"standard\"/>" + s + ref3 + "</c:line3DChart>" + ax3d + view3d();
-            case AREA_3D   -> "<c:area3DChart><c:grouping val=\"standard\"/>" + s + ref3 + "</c:area3DChart>" + ax3d + view3d();
-            case PIE_3D    -> "<c:pie3DChart>" + s + "</c:pie3DChart>" + view3d();
-            case SURFACE_3D          -> "<c:surface3DChart><c:wireframe val=\"0\"/>" + s + ref3 + "</c:surface3DChart>" + ax3d + view3d();
-            case SURFACE_WIREFRAME_3D-> "<c:surface3DChart><c:wireframe val=\"1\"/>" + s + ref3 + "</c:surface3DChart>" + ax3d + view3d();
+            case COLUMN_3D -> "<c:bar3DChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/>" + s + "<c:shape val=\"box\"/>" + ref3 + "</c:bar3DChart>" + ax3d;
+            case BAR_3D    -> "<c:bar3DChart><c:barDir val=\"bar\"/><c:grouping val=\"clustered\"/>" + s + "<c:shape val=\"box\"/>" + ref3 + "</c:bar3DChart>" + ax3dBar;
+            case LINE_3D   -> "<c:line3DChart><c:grouping val=\"standard\"/>" + s + ref3 + "</c:line3DChart>" + ax3d;
+            case AREA_3D   -> "<c:area3DChart><c:grouping val=\"standard\"/>" + s + ref3 + "</c:area3DChart>" + ax3d;
+            case PIE_3D    -> "<c:pie3DChart>" + s + "</c:pie3DChart>";
+            case SURFACE_3D          -> "<c:surface3DChart><c:wireframe val=\"0\"/>" + s + ref3 + "</c:surface3DChart>" + ax3d;
+            case SURFACE_WIREFRAME_3D-> "<c:surface3DChart><c:wireframe val=\"1\"/>" + s + ref3 + "</c:surface3DChart>" + ax3d;
             case CONTOUR   -> "<c:surfaceChart><c:wireframe val=\"0\"/>" + s + ref3 + "</c:surfaceChart>" + ax3d;
             default -> "<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/>" + s + ref2 + "</c:barChart>" + ax2d;
         };

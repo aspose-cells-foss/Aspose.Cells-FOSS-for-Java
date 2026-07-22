@@ -217,6 +217,9 @@ public final class FormatConditionCollection {
             case ICON_SET:
                 condition.setIconSetType("3TrafficLights1");
                 break;
+            default:
+                // Other condition types need no default initialization.
+                break;
         }
     }
 

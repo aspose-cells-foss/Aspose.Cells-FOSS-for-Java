@@ -48,7 +48,11 @@ public final class XlsxWorkbookSerializer {
                 }
             }
         }
-        boolean hasSst = !sst.getValues().isEmpty();
+        // The shared string table is always declared. Consumers (e.g. the Open XML SDK)
+        // expect the part to be present, and cells are interned while sheets are built —
+        // after [Content_Types].xml and workbook.xml.rels have already been written, so a
+        // content-derived flag here could under-report. An empty <sst/> is schema-valid.
+        boolean hasSst = true;
         boolean hasDocProps = true; // always include docProps per OPC "should" requirement
 
         // Pre-build style table so styles.xml and cell s= indices are consistent
@@ -95,7 +99,19 @@ public final class XlsxWorkbookSerializer {
 
         boolean hasDrawings = !drawingXmls.isEmpty();
         boolean hasCharts = !pendingChartXmls.isEmpty();
-        boolean hasVml = sheets.stream().anyMatch(ws -> XlsxWorkbookComments.buildVmlDrawingXml(ws) != null);
+        // Comment and legacy VML parts, keyed by 1-based sheet number. Both are needed before the
+        // sheet is written: Content_Types must declare the comment parts, and the worksheet needs
+        // the VML relationship id for its <legacyDrawing> element.
+        Map<Integer, byte[]> commentXmls = new LinkedHashMap<>();
+        Map<Integer, byte[]> vmlXmls = new LinkedHashMap<>();
+        for (int i = 0; i < sheets.size(); i++) {
+            byte[] cXml = XlsxWorkbookComments.buildCommentsXml(sheets.get(i));
+            if (cXml == null) continue;
+            commentXmls.put(i + 1, cXml);
+            byte[] vXml = XlsxWorkbookComments.buildVmlDrawingXml(sheets.get(i));
+            if (vXml != null) vmlXmls.put(i + 1, vXml);
+        }
+        boolean hasVml = !vmlXmls.isEmpty();
         boolean hasTheme = hasDrawings;
 
         int totalTableCount = sheets.stream().mapToInt(ws -> ws.getListObjects().size()).sum();
@@ -106,6 +122,7 @@ public final class XlsxWorkbookSerializer {
                     hasDrawings, hasCharts, pendingChartXmls.keySet(), pendingMediaFiles,
                     drawingXmls.size(), hasVml, hasTheme, extLinkCount);
             ctXml = XlsxWorkbookArchiveHelpers.addTableContentTypes(ctXml, totalTableCount);
+            ctXml = XlsxWorkbookArchiveHelpers.addCommentContentTypes(ctXml, commentXmls.keySet());
             XlsxWorkbookArchiveHelpers.write(zip, "[Content_Types].xml", ctXml);
             XlsxWorkbookArchiveHelpers.write(zip, "_rels/.rels", XlsxWorkbookArchiveHelpers.packageRelsXml(hasDocProps));
             XlsxWorkbookArchiveHelpers.write(zip, "xl/workbook.xml", workbookXml(model));
@@ -140,15 +157,17 @@ public final class XlsxWorkbookSerializer {
 
                 Integer dIdxForSheet = sheetToDrawingIndex.get(i);
                 String drawingRelId = dIdxForSheet != null ? "rIdDrw" + dIdxForSheet : null;
+                String legacyDrawingRelId = vmlXmls.containsKey(i + 1) ? "rIdVml" + (i + 1) : null;
                 XlsxWorkbookArchiveHelpers.write(zip, "xl/worksheets/sheet" + (i + 1) + ".xml",
-                        worksheetXml(ws, sst, model, styleTable, sheetRels, tableCounter, drawingRelId));
+                        worksheetXml(ws, sst, model, styleTable, sheetRels, tableCounter,
+                                     drawingRelId, legacyDrawingRelId));
 
                 // Comments
-                byte[] commentsXml = XlsxWorkbookComments.buildCommentsXml(ws);
+                byte[] commentsXml = commentXmls.get(i + 1);
                 if (commentsXml != null) {
                     int sn = i + 1;
                     XlsxWorkbookArchiveHelpers.write(zip, "xl/comments" + sn + ".xml", commentsXml);
-                    byte[] vmlXml = XlsxWorkbookComments.buildVmlDrawingXml(ws);
+                    byte[] vmlXml = vmlXmls.get(sn);
                     if (vmlXml != null)
                         XlsxWorkbookArchiveHelpers.write(zip, "xl/drawings/vmlDrawing" + sn + ".vml", vmlXml);
                     sheetRels.add(new String[]{"rIdComm" + sn,
@@ -267,11 +286,13 @@ public final class XlsxWorkbookSerializer {
      * @param styleTable style table
      * @param sheetRels accumulated sheet relationships (hyperlinks, tables, comments)
      * @param tableCounter global table index counter (incremented per table written)
+     * @param drawingRelId relationship id of this sheet's drawing part, or null
+     * @param legacyDrawingRelId relationship id of this sheet's comment VML part, or null
      * @return the computed result
      */
     private static byte[] worksheetXml(WorksheetModel ws, SharedStringRepository sst, WorkbookModel wb,
                                        XlsxWorkbookStyles.StyleTable styleTable, List<String[]> sheetRels,
-                                       int[] tableCounter, String drawingRelId) {
+                                       int[] tableCounter, String drawingRelId, String legacyDrawingRelId) {
         List<String[]> externalRels = sheetRels;
         StringBuilder sb = new StringBuilder();
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
@@ -353,6 +374,12 @@ public final class XlsxWorkbookSerializer {
         }
         sb.append("</sheetData>");
 
+        // CT_Worksheet child order is fixed by the schema:
+        // sheetProtection, autoFilter, mergeCells, conditionalFormatting,
+        // dataValidations, hyperlinks, page setup, drawing, tableParts.
+        XlsxWorkbookWorksheetProtection.buildSheetProtectionSection(ws, sb);
+        XlsxWorkbookAutoFilter.buildAutoFilterSection(ws, sb);
+
         // mergeCells
         if (!ws.getMergeRegions().isEmpty()) {
             sb.append("<mergeCells count=\"").append(ws.getMergeRegions().size()).append("\">");
@@ -368,12 +395,14 @@ public final class XlsxWorkbookSerializer {
 
         XlsxWorkbookConditionalFormatting.buildConditionalFormattingSection(ws, sb, styleTable);
         XlsxWorkbookValidations.buildDataValidationsSection(ws, sb);
-        XlsxWorkbookAutoFilter.buildAutoFilterSection(ws, sb);
-        XlsxWorkbookWorksheetProtection.buildSheetProtectionSection(ws, sb);
         XlsxWorkbookHyperlinks.buildHyperlinksSection(ws, sb, externalRels);
         XlsxWorkbookPageSetup.buildPageSetupSection(ws, sb);
         if (drawingRelId != null)
             sb.append("<drawing r:id=\"").append(drawingRelId).append("\"/>");
+        // The comment VML must be announced here, not just related: Excel refuses to open a sheet
+        // that owns both a drawing part and a vmlDrawing relationship with no <legacyDrawing>.
+        if (legacyDrawingRelId != null)
+            sb.append("<legacyDrawing r:id=\"").append(legacyDrawingRelId).append("\"/>");
         sb.append(XlsxWorkbookTables.buildTablePartsSnippet(ws, 0, sheetRels, tableCounter));
 
         sb.append("</worksheet>");

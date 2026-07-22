@@ -546,18 +546,6 @@ final class XlsxWorkbookProperties {
         return doc.createElementNS("http://schemas.openxmlformats.org/spreadsheetml/2006/main", localName);
     }
 
-    // Helper to get an attribute value as string
-    /**
-     * Processes get attribute.
-     * @param element element
-     * @param name name
-     * @return the requested result
-     */
-    private static String getAttribute(Element element, String name) {
-        String value = element.getAttribute(name);
-        return value == null ? "" : value.trim();
-    }
-
     // Helper to get a nullable integer attribute
 
     // Helper to get a nullable double attribute

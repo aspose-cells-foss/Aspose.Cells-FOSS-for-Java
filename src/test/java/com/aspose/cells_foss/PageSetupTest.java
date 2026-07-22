@@ -2,7 +2,6 @@ package com.aspose.cells_foss;
 
 import org.junit.jupiter.api.Test;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 import java.io.File;
 import java.util.Arrays;

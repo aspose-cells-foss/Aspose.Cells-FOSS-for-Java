@@ -1,6 +1,5 @@
 package com.aspose.cells_foss;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -908,6 +907,29 @@ class WorkbookTest {
             assertNotNull(ct);
             assertTrue(ct.contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"),
                 "[Content_Types].xml should contain the main spreadsheet content type");
+        }
+    }
+
+    /**
+     * Verifies that comment parts get an explicit Override in [Content_Types].xml —
+     * falling back to the generic xml Default makes strict OOXML readers reject the package.
+     */
+    @Test
+    void WB_A1b_commentPartsDeclaredInContentTypes() throws Exception {
+        try (TemporaryDirectory tempDir = new TemporaryDirectory("WorkbookTest")) {
+            String path = tempDir.getPath("wb-comments.xlsx");
+            try (Workbook wb = new Workbook()) {
+                wb.getWorksheets().add("Second");
+                wb.getWorksheets().add("Third");
+                wb.getWorksheets().get(2).getComments().add(0, 0).setNote("Third sheet note");
+                wb.save(path);
+            }
+            String ct = ZipPackageHelper.readEntryText(path, "[Content_Types].xml");
+            assertTrue(ct.contains("<Override PartName=\"/xl/comments3.xml\" "
+                    + "ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml\"/>"),
+                "[Content_Types].xml should declare the comments part for sheet 3");
+            assertFalse(ct.contains("/xl/comments1.xml"),
+                "sheets without comments should not get a comments Override");
         }
     }
 

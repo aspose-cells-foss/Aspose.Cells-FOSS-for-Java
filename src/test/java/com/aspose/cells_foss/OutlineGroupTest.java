@@ -5,16 +5,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit 5 tests for row/column outline (grouping) â€?OG-* test cases.
+ * JUnit 5 tests for row/column outline (grouping) -OG-* test cases.
  *
  * <p>Outline levels map to the OOXML {@code outlineLevel} attribute on {@code <row>} and
- * {@code <col>} elements. Level 0 means ungrouped; levels 1â€? represent nesting depth.
+ * {@code <col>} elements. Level 0 means ungrouped; levels 1- represent nesting depth.
  * The {@code collapsed} flag indicates whether the outline group is currently collapsed.
  */
 class OutlineGroupTest {
 
     // =========================================================================
-    // OG-01 â€?OG-06  Row grouping â€?in-memory API
+    // OG-01 -OG-06  Row grouping -in-memory API
     // =========================================================================
 
     /**
@@ -95,7 +95,7 @@ class OutlineGroupTest {
     }
 
     // =========================================================================
-    // OG-10 â€?OG-15  Column grouping â€?in-memory API
+    // OG-10 -OG-15  Column grouping -in-memory API
     // =========================================================================
 
     /**
@@ -176,7 +176,7 @@ class OutlineGroupTest {
     }
 
     // =========================================================================
-    // OG-20 â€?OG-27  XLSX round-trips
+    // OG-20 -OG-27  XLSX round-trips
     // =========================================================================
 
     /**
@@ -333,7 +333,7 @@ class OutlineGroupTest {
             String path = dir.getPath("nested.xlsx");
             try (Workbook wb = new Workbook()) {
                 Worksheet ws = wb.getWorksheets().get(0);
-                // outer group (level 1) rows 1â€?, inner group (level 2) rows 2â€?
+                // outer group (level 1) rows 1-, inner group (level 2) rows 2-
                 for (int r = 1; r <= 5; r++) ws.getCells().getRows().get(r).setGroupLevel(1);
                 for (int r = 2; r <= 3; r++) ws.getCells().getRows().get(r).setGroupLevel(2);
                 wb.save(path);

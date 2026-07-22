@@ -22,14 +22,50 @@ final class XlsxWorkbookDrawings {
     static final String CHARTEX_REL_TYPE  = "http://schemas.microsoft.com/office/2014/relationships/chartEx";
     static final String IMAGE_REL_TYPE    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
     static final String DRAWING_REL_TYPE  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing";
-    private static final String CHARTSTYLE_REL_TYPE  = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
-    private static final String CHARTCOLORS_REL_TYPE = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
 
     private XlsxWorkbookDrawings() {}
 
     // =========================================================================
     // Build drawing XML
     // =========================================================================
+
+    /** Matches the id attribute of any cNvPr element, whatever namespace prefix it carries. */
+    private static final java.util.regex.Pattern CNVPR_ID =
+        java.util.regex.Pattern.compile("<[A-Za-z0-9]*:?cNvPr\\b[^>]*\\bid=\"(\\d+)\"");
+
+    /** Adds every cNvPr id found in a preserved XML fragment to {@code out}. */
+    private static void collectCNvPrIds(String rawXml, Set<Integer> out) {
+        if (rawXml == null || rawXml.isBlank()) return;
+        java.util.regex.Matcher m = CNVPR_ID.matcher(rawXml);
+        while (m.find()) {
+            try { out.add(Integer.parseInt(m.group(1))); }
+            catch (NumberFormatException ignored) { /* id out of int range — cannot collide */ }
+        }
+    }
+
+    /**
+     * Claims a relationship id for a picture or chart. The original id is reused when it is still
+     * free; otherwise a fresh one is allocated, because duplicate ids in a .rels part make the whole
+     * package unreadable — shapes, whose XML is preserved verbatim, always keep theirs.
+     *
+     * @param originalRelId the id the part carried when it was loaded, may be null or empty
+     * @param claimed       ids already spoken for; the returned id is added to it
+     * @param counter       single-element allocation cursor for generated ids
+     */
+    private static String claimRId(String originalRelId, Set<String> claimed, int[] counter) {
+        if (originalRelId != null && !originalRelId.isEmpty() && claimed.add(originalRelId))
+            return originalRelId;
+        while (claimed.contains("rId" + counter[0])) counter[0]++;
+        String id = "rId" + counter[0]++;
+        claimed.add(id);
+        return id;
+    }
+
+    /** Returns the first id at or after {@code candidate} that no preserved shape already uses. */
+    private static int nextFreeShapeId(int candidate, Set<Integer> used) {
+        while (used.contains(candidate)) candidate++;
+        return candidate;
+    }
 
     /**
      * Returns true if this worksheet has any pictures or charts.
@@ -62,32 +98,27 @@ final class XlsxWorkbookDrawings {
         if (needsRNs) sb.append(" xmlns:r=\"").append(R_NS).append("\"");
         sb.append(">");
 
-        int rId = 1;
+        int[] rIdCounter = {1};
         int shapeId = 2;
 
-        // Collect all rIds already spoken for by shapes (extra rels + embedded images)
+        // Shapes preserved verbatim keep their original cNvPr ids — reserve those so generated
+        // ids (pictures, charts) cannot collide with them within the same drawing part.
+        Set<Integer> usedShapeIds = new HashSet<>();
+        for (ShapeModel shape : ws.getShapes()) collectCNvPrIds(shape.getRawElementXml(), usedShapeIds);
+        for (ChartModel chart : ws.getCharts()) collectCNvPrIds(chart.getRawGraphicFrameXml(), usedShapeIds);
+
+        // rIds spoken for by shapes (extra rels + embedded images). Shape XML is preserved verbatim
+        // and references these ids, so they cannot be reassigned — everything else yields to them.
         Set<String> usedRIds = new HashSet<>();
         for (ShapeModel shape : ws.getShapes()) {
             for (String[] rel : shape.getExtraDrawingRels()) usedRIds.add(rel[0]);
             usedRIds.addAll(shape.getEmbeddedImageData().keySet());
         }
-        // Also reserve original rIds of pictures and charts
-        for (PictureModel pic : ws.getPictures())
-            if (pic.getOriginalRelId() != null) usedRIds.add(pic.getOriginalRelId());
-        for (ChartModel chart : ws.getCharts())
-            if (chart.getOriginalRelId() != null) usedRIds.add(chart.getOriginalRelId());
 
         // Pictures — use original rId when available; allocate a fresh one otherwise
         for (int i = 0; i < ws.getPictures().size(); i++) {
             PictureModel pic = ws.getPictures().get(i);
-            String imgRId;
-            if (pic.getOriginalRelId() != null && !pic.getOriginalRelId().isEmpty()) {
-                imgRId = pic.getOriginalRelId();
-            } else {
-                while (usedRIds.contains("rId" + rId)) rId++;
-                imgRId = "rId" + rId++;
-                usedRIds.add(imgRId);
-            }
+            String imgRId = claimRId(pic.getOriginalRelId(), usedRIds, rIdCounter);
             int imgIdx = imageOffset + i + 1;
             String ext = pic.getExtension();
             String mediaPath = "xl/media/image" + imgIdx + "." + ext;
@@ -99,6 +130,7 @@ final class XlsxWorkbookDrawings {
                 pic.getUpperLeftColumn(), pic.getUpperLeftColumnOffset(),
                 pic.getLowerRightRow(), pic.getLowerRightRowOffset(),
                 pic.getLowerRightColumn(), pic.getLowerRightColumnOffset()));
+            shapeId = nextFreeShapeId(shapeId, usedShapeIds);
             sb.append(picXml(shapeId++, pic.getName(), imgRId));
             sb.append("</xdr:twoCellAnchor>");
         }
@@ -132,10 +164,11 @@ final class XlsxWorkbookDrawings {
             if (shape.getRawElementXml() != null && !shape.getRawElementXml().isBlank()) {
                 sb.append(shape.getRawElementXml());
             } else {
+                shapeId = nextFreeShapeId(shapeId, usedShapeIds);
                 sb.append(shapeXml(shapeId, shape));
+                shapeId++;
             }
             sb.append("<xdr:clientData/></xdr:twoCellAnchor>");
-            shapeId++;
         }
 
         // Charts — images start after standalone pictures AND shape-embedded images
@@ -144,14 +177,7 @@ final class XlsxWorkbookDrawings {
         int chartImageIdx = imageOffset + ws.getPictures().size() + totalShapeImgs;
         for (int i = 0; i < ws.getCharts().size(); i++) {
             ChartModel chart = ws.getCharts().get(i);
-            String chartRId;
-            if (chart.getOriginalRelId() != null && !chart.getOriginalRelId().isEmpty()) {
-                chartRId = chart.getOriginalRelId();
-            } else {
-                while (usedRIds.contains("rId" + rId)) rId++;
-                chartRId = "rId" + rId++;
-                usedRIds.add(chartRId);
-            }
+            String chartRId = claimRId(chart.getOriginalRelId(), usedRIds, rIdCounter);
             int chartIdx = chartOffset + i + 1;
             boolean isChartEx = chart.isChartEx() && chart.getRawGraphicFrameXml() != null;
             String chartFileName = isChartEx ? "chartEx" + chartIdx : "chart" + chartIdx;
@@ -218,6 +244,7 @@ final class XlsxWorkbookDrawings {
                 }
                 sb.append(frameXml).append("<xdr:clientData/>");
             } else {
+                shapeId = nextFreeShapeId(shapeId, usedShapeIds);
                 sb.append(graphicFrameXml(shapeId++, chart.getName(), chartRId,
                     chart.getRawCNvPrExtLst()));
             }
@@ -234,12 +261,10 @@ final class XlsxWorkbookDrawings {
 
     static void loadDrawings(WorksheetModel ws, Map<String, byte[]> entries,
                               Map<String, String> sheetRels) {
-        String drawingRelId = null;
         String drawingTarget = null;
         for (Map.Entry<String, String> e : sheetRels.entrySet()) {
             String target = e.getValue();
             if (target != null && target.toLowerCase().contains("drawing")) {
-                drawingRelId = e.getKey();
                 drawingTarget = target;
                 break;
             }

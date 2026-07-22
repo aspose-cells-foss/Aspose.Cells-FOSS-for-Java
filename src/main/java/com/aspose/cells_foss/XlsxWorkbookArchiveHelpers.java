@@ -185,6 +185,23 @@ final class XlsxWorkbookArchiveHelpers {
     }
 
     /**
+     * Inserts comment part Override entries into an already-built content-types byte array.
+     * Without these the parts fall back to the {@code xml} Default (application/xml), which
+     * strict consumers reject when opening the package.
+     */
+    static byte[] addCommentContentTypes(byte[] contentTypesBytes, java.util.Collection<Integer> sheetNumbers) {
+        if (sheetNumbers.isEmpty()) return contentTypesBytes;
+        String xml = new String(contentTypesBytes, StandardCharsets.UTF_8);
+        StringBuilder inserts = new StringBuilder();
+        for (int sn : sheetNumbers) {
+            inserts.append("<Override PartName=\"/xl/comments").append(sn)
+              .append(".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml\"/>");
+        }
+        xml = xml.replace("</Types>", inserts + "</Types>");
+        return xml.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
      * Processes package rels xml.
      * @param hasDocProps has doc props
      * @return the computed result

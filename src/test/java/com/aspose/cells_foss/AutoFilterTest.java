@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * JUnit 5 tests for the AutoFilter API â€?AF-* test cases.
+ * JUnit 5 tests for the AutoFilter API -AF-* test cases.
  */
 class AutoFilterTest {
 
@@ -670,7 +670,7 @@ class AutoFilterTest {
     }
 
     // =========================================================================
-    // AF-70 to AF-76: Integration â€?raw XML inspection via ZipPackageHelper
+    // AF-70 to AF-76: Integration -raw XML inspection via ZipPackageHelper
     // =========================================================================
 
     /** AF-70: Saved XLSX contains &lt;autoFilter&gt; element with correct ref attribute. */

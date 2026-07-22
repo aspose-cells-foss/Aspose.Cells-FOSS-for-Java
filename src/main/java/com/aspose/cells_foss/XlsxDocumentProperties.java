@@ -7,8 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.Properties;
-import org.w3c.dom.Document;
+
 
 /**
  * Helper class for handling XLSX document properties (core and extended).

@@ -16,3 +16,7 @@ _work/
 /output
 # Test fixtures (auto-generated, not distributed)
 /src/test/resources/Input
+
+logs/
+.claude/
+__pycache__/

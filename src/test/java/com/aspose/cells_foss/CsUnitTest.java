@@ -1,13 +1,11 @@
 package com.aspose.cells_foss;
 
-import com.aspose.cells_foss.core.AutoFilterModel;
 import com.aspose.cells_foss.core.CellAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 

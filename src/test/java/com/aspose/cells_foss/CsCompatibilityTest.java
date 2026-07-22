@@ -685,6 +685,90 @@ class CsCompatibilityTest {
             "Shape count must be preserved through roundtrip");
     }
 
+    /**
+     * cNvPr ids must be unique within a drawing part. Charts get generated ids while
+     * shapes keep the ids of the XML they were loaded from, so the two allocations must not overlap.
+     */
+    @Test
+    void drawing_shape_ids_unique_when_shapes_and_charts_share_a_sheet() throws Exception {
+        URL url = getClass().getClassLoader().getResource("Input/waterfallchart/Waterfall_Stacked_V2.xlsx");
+        assertNotNull(url, "Waterfall_Stacked_V2.xlsx not found in test resources");
+
+        Path out = tempDir.resolve("drawing-ids.xlsx");
+        try (Workbook wb = new Workbook(Path.of(url.toURI()).toString())) {
+            wb.save(out.toString());
+        }
+
+        java.util.regex.Pattern idPattern =
+            java.util.regex.Pattern.compile("<[A-Za-z0-9]*:?cNvPr\\b[^>]*\\bid=\"(\\d+)\"");
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(out.toFile())) {
+            int checkedParts = 0;
+            for (java.util.Enumeration<? extends java.util.zip.ZipEntry> e = zip.entries(); e.hasMoreElements(); ) {
+                java.util.zip.ZipEntry entry = e.nextElement();
+                if (!entry.getName().matches("xl/drawings/drawing\\d+\\.xml")) continue;
+                String xml = new String(zip.getInputStream(entry).readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                java.util.regex.Matcher m = idPattern.matcher(xml);
+                while (m.find()) {
+                    assertTrue(seen.add(m.group(1)),
+                        "Duplicate cNvPr id " + m.group(1) + " in " + entry.getName());
+                }
+                checkedParts++;
+            }
+            assertTrue(checkedParts > 0, "Expected at least one drawing part to inspect");
+        }
+    }
+
+    /**
+     * Package-level invariants Excel enforces on save: relationship ids unique within each .rels part,
+     * and a sheet that relates a comment VML part must announce it with &lt;legacyDrawing&gt;.
+     */
+    @Test
+    void saved_package_has_unique_rel_ids_and_declares_legacy_drawings() throws Exception {
+        String[] inputs = {
+            "Input/waterfallchart/Waterfall_Stacked_V2.xlsx",
+            "Input/waterfallchart/Waterfall_CrossAxis_V2.xlsx"
+        };
+        for (String input : inputs) {
+            URL url = getClass().getClassLoader().getResource(input);
+            assertNotNull(url, input + " not found in test resources");
+
+            Path out = tempDir.resolve(Path.of(input).getFileName().toString());
+            try (Workbook wb = new Workbook(Path.of(url.toURI()).toString())) {
+                wb.save(out.toString());
+            }
+
+            java.util.regex.Pattern relPattern = java.util.regex.Pattern.compile(
+                "<Relationship\\b[^>]*\\bId=\"([^\"]+)\"[^>]*\\bType=\"([^\"]+)\"");
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(out.toFile())) {
+                for (java.util.Enumeration<? extends java.util.zip.ZipEntry> e = zip.entries(); e.hasMoreElements(); ) {
+                    java.util.zip.ZipEntry entry = e.nextElement();
+                    if (!entry.getName().endsWith(".rels")) continue;
+                    String rels = new String(zip.getInputStream(entry).readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+
+                    java.util.Set<String> seen = new java.util.HashSet<>();
+                    String vmlRelId = null;
+                    java.util.regex.Matcher m = relPattern.matcher(rels);
+                    while (m.find()) {
+                        assertTrue(seen.add(m.group(1)),
+                            "Duplicate relationship id " + m.group(1) + " in " + input + " " + entry.getName());
+                        if (m.group(2).endsWith("/vmlDrawing")) vmlRelId = m.group(1);
+                    }
+                    if (vmlRelId == null || !entry.getName().startsWith("xl/worksheets/")) continue;
+
+                    String sheetName = "xl/worksheets/"
+                        + entry.getName().substring(entry.getName().lastIndexOf('/') + 1).replace(".rels", "");
+                    String sheetXml = new String(zip.getInputStream(zip.getEntry(sheetName)).readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                    assertTrue(sheetXml.contains("<legacyDrawing r:id=\"" + vmlRelId + "\"/>"),
+                        sheetName + " relates a vmlDrawing but has no matching <legacyDrawing> (" + input + ")");
+                }
+            }
+        }
+    }
+
     @Test
     void shape_all_types_saved_to_output() throws IOException {
         Workbook wb = new Workbook();
