@@ -9,7 +9,7 @@ This file is for coding agents working in this repository.
 - Build tool: Maven
 - Packaging: `jar`
 - Primary scope: read, modify, and write Excel `.xlsx` workbooks
-- Public API package: `com.aspose.cells_foss`
+- Public API package: `org.aspose.cells_foss`
 
 This is an XLSX-focused spreadsheet library with a public object model plus internal workbook, style, packaging, XML, and serializer layers.
 
@@ -32,7 +32,7 @@ This is an XLSX-focused spreadsheet library with a public object model plus inte
 - `src/test/java/com/aspose/cells_foss/`
   JUnit 5 scenario-driven tests.
 - `docs/apidocs/`
-  Generated HTML Javadoc for the public API (`com.aspose.cells_foss` only). Regenerate with `mvn javadoc:javadoc`; do not edit by hand.
+  Generated HTML Javadoc for the public API (`org.aspose.cells_foss` only). Regenerate with `mvn javadoc:javadoc`; do not edit by hand.
 - `target/`
   Build output. Do not edit generated contents directly.
 
@@ -43,7 +43,7 @@ Use Maven from the repository root.
 - Compile: `mvn compile`
 - Run tests: `mvn test`
 - Full build: `mvn clean package`
-- Generate Javadoc: `mvn javadoc:javadoc` → output at `docs/apidocs/index.html`
+- Generate Javadoc: `mvn javadoc:javadoc` 鈫?output at `docs/apidocs/index.html`
 
 When validating a change, prefer the smallest useful command first:
 
@@ -55,7 +55,7 @@ When validating a change, prefer the smallest useful command first:
 
 Keep responsibilities aligned with the current architecture:
 
-- Public API classes in `com.aspose.cells_foss` should stay user-facing and ergonomic.
+- Public API classes in `org.aspose.cells_foss` should stay user-facing and ergonomic.
 - Core model classes in `core` should remain implementation-detail containers.
 - OOXML serialization/parsing logic belongs in `XlsxWorkbook*`, `packaging`, and `xml` classes.
 - Validation-only helpers belong in `validation`.
@@ -107,7 +107,7 @@ Be conservative with public API changes.
 - Avoid renaming or removing public methods unless explicitly required.
 - Keep overloads and enum values backward compatible when possible.
 - If behavior changes, add or update tests that show the new public behavior.
-- If a method is public in `com.aspose.cells_foss`, assume downstream users may depend on it.
+- If a method is public in `org.aspose.cells_foss`, assume downstream users may depend on it.
 - Keep README examples aligned with actual method names and current public return types.
 
 ## Testing Expectations
@@ -147,7 +147,7 @@ Keep test style consistent:
 
 For public API changes:
 
-- update the public wrapper in `com.aspose.cells_foss`
+- update the public wrapper in `org.aspose.cells_foss`
 - update the backing model if needed
 - update XLSX load/save behavior if persistence is affected
 - add or update round-trip tests
@@ -195,3 +195,4 @@ Do not describe placeholder or partial APIs as complete features.
 4. Update the smallest coherent set of files.
 5. Run `mvn test` or `mvn clean package` when code changes warrant it.
 6. Update docs if user-facing behavior changed.
+

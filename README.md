@@ -1,7 +1,7 @@
 # Aspose.Cells FOSS for Java
 
 Aspose.Cells FOSS for Java is a Java 17 spreadsheet library for creating, loading, modifying, and saving Excel `.xlsx` workbooks.
-It exposes a user-facing API in `com.aspose.cells_foss` and keeps OOXML packaging, XML mapping, and XLSX serialization inside this repository.
+It exposes a user-facing API in `org.aspose.cells_foss` and keeps OOXML packaging, XML mapping, and XLSX serialization inside this repository.
 
 ## Installation
 
@@ -41,16 +41,16 @@ The library stores and round-trips formulas, but it is not a full spreadsheet ca
 - Auto filters with color filters, dynamic filters, top-10 filters, custom filters, and sort conditions
 - Page setup
 - Worksheet protection
-- Freeze panes — freeze rows and/or columns by coordinate or cell name; inspect and clear frozen state
-- **Cell comments** — add, edit, and remove comments (notes) with author, text, visibility, and size
-- **Embedded pictures** — add images from bytes, streams, or file paths with two-cell anchor positioning; JPEG, PNG, GIF, and BMP detection
-- **Embedded charts** — read chart name, type, anchor, and extent; 21 standard chart types can be created programmatically via `ChartCollection.add()`; loaded charts are preserved verbatim across load/save
-- **Drawing shapes** — add, retrieve, and remove drawing objects with 35 preset geometries (`AutoShapeType`); complex shapes loaded from XLSX are preserved verbatim
-- **Excel tables (ListObjects)** — create, resize, style, and remove structured tables with column definitions and totals rows
-- **Workbook protection** — lock structure, windows, and revisions with separate passwords via `WorkbookProtection`
-- **Workbook view** — read and write window position, size, active tab, scroll bar and sheet tab visibility via `WorkbookView`
-- **Calculation properties** — configure calculation mode, reference mode, iterative calculation, and precision via `CalculationProperties`
-- **Error cell values** — `#N/A`, `#VALUE!`, `#REF!` and other error results are loaded, stored, and saved with the correct `t="e"` cell type
+- Freeze panes 鈥?freeze rows and/or columns by coordinate or cell name; inspect and clear frozen state
+- **Cell comments** 鈥?add, edit, and remove comments (notes) with author, text, visibility, and size
+- **Embedded pictures** 鈥?add images from bytes, streams, or file paths with two-cell anchor positioning; JPEG, PNG, GIF, and BMP detection
+- **Embedded charts** 鈥?read chart name, type, anchor, and extent; 21 standard chart types can be created programmatically via `ChartCollection.add()`; loaded charts are preserved verbatim across load/save
+- **Drawing shapes** 鈥?add, retrieve, and remove drawing objects with 35 preset geometries (`AutoShapeType`); complex shapes loaded from XLSX are preserved verbatim
+- **Excel tables (ListObjects)** 鈥?create, resize, style, and remove structured tables with column definitions and totals rows
+- **Workbook protection** 鈥?lock structure, windows, and revisions with separate passwords via `WorkbookProtection`
+- **Workbook view** 鈥?read and write window position, size, active tab, scroll bar and sheet tab visibility via `WorkbookView`
+- **Calculation properties** 鈥?configure calculation mode, reference mode, iterative calculation, and precision via `CalculationProperties`
+- **Error cell values** 鈥?`#N/A`, `#VALUE!`, `#REF!` and other error results are loaded, stored, and saved with the correct `t="e"` cell type
 - Document properties and workbook property persistence for supported `workbookPr` attributes
 - `NumberFormat` utility for looking up and resolving built-in Excel format codes
 - Load diagnostics, repair reporting, and preservation of unsupported package parts during load/save flows
@@ -82,10 +82,10 @@ mvn javadoc:javadoc   # generates docs/apidocs/index.html
 Create a workbook, write values, style a cell, and save it:
 
 ```java
-import com.aspose.cells_foss.Cell;
-import com.aspose.cells_foss.Style;
-import com.aspose.cells_foss.Workbook;
-import com.aspose.cells_foss.Worksheet;
+import org.aspose.cells_foss.Cell;
+import org.aspose.cells_foss.Style;
+import org.aspose.cells_foss.Workbook;
+import org.aspose.cells_foss.Worksheet;
 
 public class Main {
     public static void main(String[] args) {
@@ -114,9 +114,9 @@ public class Main {
 Load an existing workbook with options and inspect diagnostics:
 
 ```java
-import com.aspose.cells_foss.LoadIssue;
-import com.aspose.cells_foss.LoadOptions;
-import com.aspose.cells_foss.Workbook;
+import org.aspose.cells_foss.LoadIssue;
+import org.aspose.cells_foss.LoadOptions;
+import org.aspose.cells_foss.Workbook;
 
 public class LoadWorkbook {
     public static void main(String[] args) {
@@ -142,16 +142,16 @@ public class LoadWorkbook {
 Add data validation and conditional formatting:
 
 ```java
-import com.aspose.cells_foss.CellArea;
-import com.aspose.cells_foss.FormatCondition;
-import com.aspose.cells_foss.FormatConditionCollection;
-import com.aspose.cells_foss.FormatConditionType;
-import com.aspose.cells_foss.OperatorType;
-import com.aspose.cells_foss.Style;
-import com.aspose.cells_foss.Validation;
-import com.aspose.cells_foss.ValidationType;
-import com.aspose.cells_foss.Workbook;
-import com.aspose.cells_foss.Worksheet;
+import org.aspose.cells_foss.CellArea;
+import org.aspose.cells_foss.FormatCondition;
+import org.aspose.cells_foss.FormatConditionCollection;
+import org.aspose.cells_foss.FormatConditionType;
+import org.aspose.cells_foss.OperatorType;
+import org.aspose.cells_foss.Style;
+import org.aspose.cells_foss.Validation;
+import org.aspose.cells_foss.ValidationType;
+import org.aspose.cells_foss.Workbook;
+import org.aspose.cells_foss.Worksheet;
 
 public class RulesExample {
     public static void main(String[] args) {
@@ -235,7 +235,7 @@ Representative test areas include:
 
 ## Notes For Contributors
 
-- The main public API lives in `com.aspose.cells_foss`
+- The main public API lives in `org.aspose.cells_foss`
 - XLSX serialization and OOXML handling are implemented inside this repository
 - If you change supported behavior, update `README.md`, `Agents.md`, and tests together
 
@@ -248,3 +248,4 @@ This repository includes the MIT license at [`License/LICENSE.txt`](License/LICE
 For bug reports, feature requests, and project questions, use the GitHub issue tracker:
 
 - [Project issues](https://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java/issues)
+
