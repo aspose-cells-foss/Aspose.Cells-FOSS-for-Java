@@ -249,3 +249,12 @@ For bug reports, feature requests, and project questions, use the GitHub issue t
 
 - [Project issues](https://github.com/aspose-cells-foss/Aspose.Cells-FOSS-for-Java/issues)
 
+
+<!-- readme-agent:resources hash="sha256:15f811d4cf8ec423a0839441e433b2320fcf655480da6457324fc3b6101e510b" schema="2" -->
+### Related Aspose Resources
+
+- **Open-source (FOSS) catalog:** [Aspose.Cells FOSS for Java](https://products.aspose.org/cells/java/)
+- **Commercial edition:** [Aspose.Cells for Java](https://products.aspose.com/cells/java/?utm_source=github&utm_medium=readme&utm_campaign=foss-readme-optimizer)
+
+This repository contains the free, open-source (FOSS) edition of Aspose.Cells for Java, which provides a subset of the functionality available in the commercial edition under the MIT License. Users seeking enhanced capabilities, additional features, and commercial support can upgrade to the full Aspose.Cells for Java product, which is distributed under a commercial license.
+<!-- readme-agent:resources:end -->
