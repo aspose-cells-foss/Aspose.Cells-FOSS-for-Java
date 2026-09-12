@@ -17,6 +17,7 @@ to `.xlsx`.
 - [At a Glance](#at-a-glance)
 - [Key Capabilities](#key-capabilities)
 - [Installation](#installation)
+- [Dependencies](#dependencies)
 - [Quick Start](#quick-start)
 - [Additional Examples](#additional-examples)
 - [Project Structure](#project-structure)
@@ -68,7 +69,8 @@ flowchart TD
 
 - Read, write, and edit Excel `.xlsx` workbooks through `Workbook`, which owns a
   `WorksheetCollection` of `Worksheet` objects — add, remove, and rename sheets, select the
-  active sheet, and control per-sheet visibility (`SheetVisibility`) through the collection.
+  active sheet through the collection, and control per-sheet visibility on each `Worksheet` via
+  `getVisibilityType()`/`setVisibilityType()` (`VisibilityType`).
   Each worksheet exposes a `Cells` collection of `Cell` objects for reading and writing string,
   numeric, boolean, date/time, and formula values. `LoadOptions` exposes strict-mode toggles and
   package/XML repair, and `Workbook.getLoadDiagnostics()` returns a load diagnostics report —
@@ -114,17 +116,37 @@ Add the dependency to your `pom.xml`:
 <dependency>
   <groupId>org.aspose</groupId>
   <artifactId>aspose-cells-foss</artifactId>
-  <version>26.5.0</version>
+  <version>26.7.0</version>
 </dependency>
 ```
 
 Gradle (Groovy DSL):
 
 ```groovy
-implementation 'org.aspose:aspose-cells-foss:26.5.0'
+implementation 'org.aspose:aspose-cells-foss:26.7.0'
 ```
 
 The library targets Java 17 and depends on Apache POI only in `test` scope, never at runtime.
+
+## Dependencies
+
+### Required Package Dependencies
+
+No required third-party package dependencies. The published `aspose-cells-foss` package builds
+from `pom.xml`, which declares no dependencies outside `test` scope.
+
+### Native and System Requirements
+
+- Java 17 or later (`maven.compiler.source`/`maven.compiler.target` are both pinned to `17` in
+  `pom.xml`).
+
+### Development Dependencies
+
+- `org.junit.jupiter:junit-jupiter` 5.10.2 — test runner used by the Maven `test` phase; not
+  needed to use the published library.
+- `org.apache.poi:poi-ooxml` 5.3.0 — used across the test suite as an independent XLSX
+  implementation for round-trip and compatibility verification; not needed to use the published
+  library.
 
 ## Quick Start
 
@@ -490,7 +512,7 @@ chart type creation, and dedicated enterprise support.
 
 ## Development and Testing
 
-Requires JDK 17+ and Maven as the build tool (3.9+). Run the test suite:
+Requires JDK 17+ and Maven as the build tool. Run the test suite:
 
 ```bash
 mvn test
