@@ -13,9 +13,15 @@ on:
         options:
           - ubuntu
           - windows
+      deployment_id:
+        description: 'Sonatype Central Portal deploymentId to finish-publish (break-glass only -- leave empty for a normal dry-run dispatch). See PUBLISHING.md.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   # ── JOB 1: Ubuntu dry-run ────────────────────────────────────────────────────
@@ -289,3 +295,82 @@ jobs:
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: mvn -B deploy -DskipTests
+
+      - name: Verify artifact actually reached Maven Central
+        id: verify
+        shell: bash
+        run: |
+          AID="aspose-cells-foss"
+          VER="$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          URL="https://repo1.maven.org/maven2/org/aspose/${AID}/${VER}/${AID}-${VER}.jar"
+          for i in $(seq 1 48); do
+            STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$URL")"
+            if [ "$STATUS" = "200" ]; then
+              echo "Confirmed live on Maven Central: $URL"
+              exit 0
+            fi
+            echo "Attempt $i/48: not yet live (HTTP $STATUS) -- waiting 5 min"
+            sleep 300
+          done
+          echo "::error::org.aspose:${AID}:${VER} never appeared on Maven Central after 4h of post-deploy polling. The 'Deploy to Maven Central' step reported success, but the artifact is not live -- check https://central.sonatype.com/publishing/deployments for a deployment stuck awaiting manual publish or failed validation. This is the exact failure mode that stranded v26.7.0 for two months (2026-07-22 to 2026-09-23): use this workflow's 'deployment_id' workflow_dispatch input to finish-publish once the stuck deployment is identified."
+          exit 1
+
+      - name: Open or update incident issue on stuck publish
+        if: failure() && steps.verify.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.verify.outputs.version }}';
+            const title = `Maven Central publish stuck: ${version} never went live`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `The "Deploy to Maven Central" step for **${version}** reported success,`,
+              'but the artifact never appeared on repo1.maven.org after 4 hours of polling.',
+              '',
+              'Check the deployment status at https://central.sonatype.com/publishing/deployments --',
+              'it likely needs a manual "Publish" click, or investigation of a validation failure.',
+              'Once you have the deploymentId, this workflow can finish it: dispatch it again with',
+              'the `deployment_id` input set (target can stay empty).',
+              '',
+              `Workflow run: ${runUrl}`,
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'stuck-publish',
+            });
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number,
+                body: `Recurred at ${new Date().toISOString()}.\n\n${body}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['stuck-publish'],
+              });
+            }
+
+  # ── JOB 4: Break-glass -- finish a validated-but-unpublished deployment ───────
+  finish-stuck-publish:
+    name: Finish publishing a stuck deployment (manual, break-glass)
+    if: github.event_name == 'workflow_dispatch' && inputs.deployment_id != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST publish call to Sonatype Central Portal
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          TOKEN="$(printf '%s:%s' "$MAVEN_CENTRAL_USERNAME" "$MAVEN_CENTRAL_PASSWORD" | base64 -w 0)"
+
+          echo "Current status of deployment $DEPLOYMENT_ID:"
+          curl -s -H "Authorization: Bearer ${TOKEN}"             "https://central.sonatype.com/api/v1/publisher/deployment/${DEPLOYMENT_ID}"
+          echo
+
+          echo "Publishing deployment $DEPLOYMENT_ID ..."
+          HTTP_CODE="$(curl -s -o /tmp/publish_response.json -w "%{http_code}" -X POST             -H "Authorization: Bearer ${TOKEN}"             "https://central.sonatype.com/api/v1/publisher/deployment/${DEPLOYMENT_ID}")"
+          echo "HTTP ${HTTP_CODE}"
+          cat /tmp/publish_response.json || true
+          [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ] || { echo "::error::Publish call failed with HTTP ${HTTP_CODE}"; exit 1; }
+          echo "Publish call accepted. Sync to repo1.maven.org can take 30 minutes to 4 hours -- re-check https://repo1.maven.org/maven2/org/aspose/aspose-cells-foss/ later."
