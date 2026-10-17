@@ -30,37 +30,42 @@ to `.xlsx`.
 ## At a Glance
 
 ```mermaid
-flowchart TD
+%%{init: {"htmlLabels": false, "flowchart": {"htmlLabels": false, "nodeSpacing": 22, "rankSpacing": 26, "padding": 10, "useMaxWidth": true, "wrappingWidth": 400}}}%%
+flowchart LR
   subgraph StartingPoints["Starting Points"]
-    i1["Existing .xlsx workbook (file path or stream)"]
+    direction TB
+    i1["Existing .xlsx<br/>workbook (file<br/>path or stream)"]
   end
-  PRODUCT["Aspose.Cells FOSS for Java"]
+  PRODUCT["Aspose.Cells<br/>FOSS for Java"]
   subgraph Capabilities["Core Capabilities"]
-    direction LR
-    subgraph capl[" "]
-      direction TB
-      c1["Workbook and worksheet creation, loading, and saving"]
-      c2["Cell values and formulas"]
-      c3["Cell and range styling (fonts, borders, fills, alignment, number formats)"]
-      c4["Row and column sizing, hiding, and outline grouping"]
-      c5["Merged cells, defined names, and hyperlinks"]
-      c6["Data validation"]
-      c7["Conditional formatting"]
-      c8["Auto filters with color, dynamic, top-10, and custom filter types"]
-    end
+    direction TB
     subgraph capr[" "]
       direction TB
-      c9["Page setup, freeze panes, and worksheet/workbook protection"]
+      c9["Page setup, freeze<br/>panes, and<br/>worksheet/workbook<br/>protection"]
       c10["Cell comments"]
-      c11["Embedded pictures"]
+      c11["Embedded<br/>pictures"]
       c12["Embedded charts"]
       c13["Drawing shapes"]
-      c14["Excel tables (ListObjects)"]
-      c15["Load diagnostics and repair reporting"]
+      c14["Excel tables<br/>(ListObjects)"]
+      c15["Load<br/>diagnostics and<br/>repair reporting"]
+      c9 ~~~ c10 ~~~ c11 ~~~ c12 ~~~ c13 ~~~ c14 ~~~ c15
+    end
+    subgraph capl[" "]
+      direction TB
+      c1["Workbook and<br/>worksheet<br/>creation, loading,<br/>and saving"]
+      c2["Cell values<br/>and formulas"]
+      c3["Cell and range<br/>styling (fonts,<br/>borders, fills,<br/>alignment,<br/>number formats)"]
+      c4["Row and column<br/>sizing, hiding, and<br/>outline grouping"]
+      c5["Merged cells,<br/>defined names,<br/>and hyperlinks"]
+      c6["Data validation"]
+      c7["Conditional<br/>formatting"]
+      c8["Auto filters with<br/>color, dynamic,<br/>top-10, and<br/>custom filter types"]
+      c1 ~~~ c2 ~~~ c3 ~~~ c4 ~~~ c5 ~~~ c6 ~~~ c7 ~~~ c8
     end
   end
   subgraph Outputs["Outputs"]
-    o1[".xlsx workbook (file path or binary stream)"]
+    direction TB
+    o1[".xlsx workbook<br/>(file path or<br/>binary stream)"]
   end
   StartingPoints --> PRODUCT --> Capabilities --> Outputs
 ```
